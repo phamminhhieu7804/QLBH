@@ -58,7 +58,16 @@ export const getRestaurantInfoByTableId = async (req, res) => {
 // Thiết lập Vốn đầu tư & Tỷ suất lợi nhuận mong muốn (An toàn với giá trị trống)
 export const updateFinancialConfig = async (req, res) => {
   try {
-    const { restaurantId, initialInvestment, targetProfitMargin } = req.body;
+    const { 
+      restaurantId, 
+      initialInvestment, 
+      targetProfitMargin,
+      bankId,
+      customBank,
+      bankAccountNo,
+      bankAccountName,
+      bankFullName
+    } = req.body;
 
     if (!restaurantId) {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã restaurantId' });
@@ -73,26 +82,34 @@ export const updateFinancialConfig = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy Quán ăn cần cấu hình' });
     }
 
-    // Logic xử lý giá trị trống/null (khi người dùng xóa sạch ô nhập liệu trên FE gửi chuỗi rỗng "")
-    const parsedInvestment = (initialInvestment === '' || initialInvestment === undefined || initialInvestment === null) 
-      ? null 
-      : Number(initialInvestment);
+    // Cập nhật cấu hình tài chính nếu có truyền lên
+    if (initialInvestment !== undefined || targetProfitMargin !== undefined) {
+      const parsedInvestment = (initialInvestment === '' || initialInvestment === undefined || initialInvestment === null) 
+        ? null 
+        : Number(initialInvestment);
 
-    const parsedMargin = (targetProfitMargin === '' || targetProfitMargin === undefined || targetProfitMargin === null) 
-      ? null 
-      : Number(targetProfitMargin);
+      const parsedMargin = (targetProfitMargin === '' || targetProfitMargin === undefined || targetProfitMargin === null) 
+        ? null 
+        : Number(targetProfitMargin);
 
-    // Cập nhật cấu hình
-    restaurant.config = {
-      initialInvestment: parsedInvestment,
-      targetProfitMargin: parsedMargin
-    };
+      restaurant.config = {
+        initialInvestment: parsedInvestment,
+        targetProfitMargin: parsedMargin
+      };
+    }
+
+    // Cập nhật cấu hình ngân hàng khi được truyền lên
+    if (bankId !== undefined) restaurant.bankId = bankId;
+    if (customBank !== undefined) restaurant.customBank = customBank;
+    if (bankAccountNo !== undefined) restaurant.bankAccountNo = bankAccountNo;
+    if (bankAccountName !== undefined) restaurant.bankAccountName = bankAccountName;
+    if (bankFullName !== undefined) restaurant.bankFullName = bankFullName;
 
     await restaurant.save();
 
     return res.status(200).json({
       success: true,
-      message: 'Cập nhật cấu hình tài chính thành công!',
+      message: 'Cập nhật cấu hình thành công!',
       data: restaurant
     });
   } catch (error) {

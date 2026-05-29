@@ -154,87 +154,154 @@ const MILKTEA_MENU = [
 ];
 
 export const MenuProvider = ({ children }) => {
-  const { tenant } = useContext(TenantContext);
+  const { tenant, restaurantId } = useContext(TenantContext);
   const [menuItems, setMenuItems] = useState([]);
 
-  // Lắng nghe sự thay đổi của Tenant để cập nhật thực đơn tương ứng
+  // Hàm tải thực đơn món ăn từ database MongoDB Render
+  const fetchMenu = async () => {
+    if (!tenant || !restaurantId) return;
+    try {
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/products?restaurantId=${restaurantId}&tenant=${tenant}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        }
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const formatted = data.data.map(item => ({
+          id: item._id,
+          name: item.name,
+          sellingPrice: item.price,
+          costPrice: item.costPrice,
+          category: item.category,
+          status: item.isAvailable ? 'active' : 'inactive',
+          image: item.image,
+          description: item.description || ''
+        }));
+        setMenuItems(formatted);
+      }
+    } catch (err) {
+      console.error('Error fetching menu items:', err.message);
+    }
+  };
+
   useEffect(() => {
-    if (!tenant) {
-      setMenuItems([]);
-      return;
-    }
+    fetchMenu();
+  }, [tenant, restaurantId]);
 
-    const storageKey = `restaurant_menu_${tenant}`;
-    const savedMenu = localStorage.getItem(storageKey);
+  // Thêm món ăn mới qua API
+  const addMenuItem = async (item) => {
+    if (!restaurantId) return;
+    try {
+      const payload = {
+        name: item.name,
+        image: item.image || '',
+        price: Number(item.sellingPrice),
+        costPrice: Number(item.costPrice),
+        category: item.category,
+        description: item.description || '',
+        restaurantId
+      };
 
-    if (savedMenu) {
-      setMenuItems(JSON.parse(savedMenu));
-    } else {
-      // Khởi tạo menu trống hoàn toàn cho quán mới để chủ quán tự thêm món
-      setMenuItems([]);
-      localStorage.setItem(storageKey, JSON.stringify([]));
-    }
-  }, [tenant]);
-
-  // Cập nhật thực đơn trên localStorage khi thay đổi state
-  const saveToLocalStorage = (updatedMenu) => {
-    if (tenant) {
-      localStorage.setItem(`restaurant_menu_${tenant}`, JSON.stringify(updatedMenu));
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/products?tenant=${tenant}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchMenu(); // Load lại thực đơn mới từ DB
+        logActivity(tenant, 'Thực đơn', `Thêm món ăn mới: ${item.name} (Giá bán: ${Number(item.sellingPrice).toLocaleString('vi-VN')}đ)`);
+      }
+    } catch (err) {
+      console.error('Error adding menu item:', err.message);
     }
   };
 
-  // Thêm món ăn mới
-  const addMenuItem = (item) => {
-    const newItem = {
-      ...item,
-      id: `food-${Date.now()}`,
-      sellingPrice: Number(item.sellingPrice),
-      costPrice: Number(item.costPrice),
-      status: item.status || 'active'
-    };
-    const updated = [newItem, ...menuItems];
-    setMenuItems(updated);
-    saveToLocalStorage(updated);
-    logActivity(tenant, 'Thực đơn', `Thêm món ăn mới: ${newItem.name} (Giá bán: ${newItem.sellingPrice.toLocaleString('vi-VN')}đ)`);
+  // Cập nhật món ăn qua API
+  const updateMenuItem = async (updatedItem) => {
+    try {
+      const payload = {
+        name: updatedItem.name,
+        image: updatedItem.image || '',
+        price: Number(updatedItem.sellingPrice),
+        costPrice: Number(updatedItem.costPrice),
+        category: updatedItem.category,
+        description: updatedItem.description || '',
+        isAvailable: updatedItem.status === 'active'
+      };
+
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/products/${updatedItem.id}?tenant=${tenant}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchMenu(); // Tải lại DB
+        logActivity(tenant, 'Thực đơn', `Cập nhật thông tin món: ${updatedItem.name}`);
+      }
+    } catch (err) {
+      console.error('Error updating menu item:', err.message);
+    }
   };
 
-  // Cập nhật món ăn
-  const updateMenuItem = (updatedItem) => {
-    const formattedItem = {
-      ...updatedItem,
-      sellingPrice: Number(updatedItem.sellingPrice),
-      costPrice: Number(updatedItem.costPrice)
-    };
-    const updated = menuItems.map((item) => (item.id === formattedItem.id ? formattedItem : item));
-    setMenuItems(updated);
-    saveToLocalStorage(updated);
-    logActivity(tenant, 'Thực đơn', `Cập nhật thông tin món: ${formattedItem.name}`);
-  };
-
-  // Xóa món ăn
-  const deleteMenuItem = (id) => {
+  // Xóa món ăn qua API
+  const deleteMenuItem = async (id) => {
     const targetItem = menuItems.find((item) => item.id === id);
-    const updated = menuItems.filter((item) => item.id !== id);
-    setMenuItems(updated);
-    saveToLocalStorage(updated);
-    if (targetItem) {
-      logActivity(tenant, 'Thực đơn', `Xóa món khỏi thực đơn: ${targetItem.name}`);
+    try {
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/products/${id}?tenant=${tenant}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchMenu(); // Tải lại DB
+        if (targetItem) {
+          logActivity(tenant, 'Thực đơn', `Xóa món khỏi thực đơn: ${targetItem.name}`);
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting menu item:', err.message);
     }
   };
 
-  // Đổi nhanh trạng thái món ăn (Còn/Hết)
-  const toggleMenuItemStatus = (id) => {
+  // Đổi nhanh trạng thái món ăn qua API
+  const toggleMenuItemStatus = async (id) => {
     const targetItem = menuItems.find((item) => item.id === id);
-    const updated = menuItems.map((item) =>
-      item.id === id
-        ? { ...item, status: item.status === 'active' ? 'inactive' : 'active' }
-        : item
-    );
-    setMenuItems(updated);
-    saveToLocalStorage(updated);
-    if (targetItem) {
-      const nextStatus = targetItem.status === 'active' ? 'inactive' : 'active';
-      logActivity(tenant, 'Thực đơn', `Thay đổi kinh doanh món ${targetItem.name} thành [${nextStatus === 'active' ? 'ĐANG KINH DOANH' : 'NGỪNG KINH DOANH'}]`);
+    if (!targetItem) return;
+    try {
+      const nextAvailable = targetItem.status !== 'active';
+      const payload = {
+        isAvailable: nextAvailable
+      };
+
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/products/${id}?tenant=${tenant}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchMenu(); // Tải lại DB
+        const nextStatus = nextAvailable ? 'ĐANG KINH DOANH' : 'NGỪNG KINH DOANH';
+        logActivity(tenant, 'Thực đơn', `Thay đổi kinh doanh món ${targetItem.name} thành [${nextStatus}]`);
+      }
+    } catch (err) {
+      console.error('Error toggling menu item status:', err.message);
     }
   };
 

@@ -103,190 +103,158 @@ const MILKTEA_ORDERS = [
 ];
 
 export const CartProvider = ({ children }) => {
-  const { tenant } = useContext(TenantContext);
+  const { tenant, restaurantId } = useContext(TenantContext);
   
   const urlParams = new URLSearchParams(window.location.search);
   const isQRMode = (urlParams.has('table') && urlParams.has('tenant')) || localStorage.getItem('saas_current_role') === 'customer';
   
-  // State quản lý danh sách bàn ăn động của quán
   const [tables, setTables] = useState([]);
+  const [activeTableId, setActiveTableId] = useState('');
   
-  // Trạng thái bàn đang chọn
-  const [activeTableId, setActiveTableId] = useState('table-1');
-  
-  // Đối tượng giỏ hàng chứa giỏ hàng của từng bàn độc lập: { 'table-1': [], 'table-2': [] }
+  // States local để giữ tương thích giao diện
   const [tableCarts, setTableCarts] = useState({});
-  const [qrDraftCarts, setQrDraftCarts] = useState({}); // State quản lý danh sách bàn ăn nháp cho QR
-  const [tableDiningModes, setTableDiningModes] = useState({}); // Lưu trữ hình thức phục vụ: dine-in (ngồi ăn) / take-away (mang đi)
-  const [tableOrderMetadata, setTableOrderMetadata] = useState({}); // Lưu trữ thời gian bắt đầu, ngày, người phục vụ: { 'table-1': { startTime, date, waiter } }
+  const [qrDraftCarts, setQrDraftCarts] = useState({}); 
+  const [tableDiningModes, setTableDiningModes] = useState({}); 
+  const [tableOrderMetadata, setTableOrderMetadata] = useState({}); 
   
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [taxPercentage, setTaxPercentage] = useState(0);
   const [ordersHistory, setOrdersHistory] = useState([]);
 
-  // Lắng nghe sự thay đổi của Tenant để load bàn ăn, giỏ hàng các bàn & lịch sử giao dịch của quán đó
-  useEffect(() => {
-    if (!tenant) {
-      setTables([]);
-      setTableCarts({});
-      setQrDraftCarts({});
-      setTableDiningModes({});
-      setTableOrderMetadata({});
-      setOrdersHistory([]);
-      setActiveTableId('table-1');
-      return;
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const qrTableId = urlParams.get('table');
-    if (qrTableId) {
-      setActiveTableId(qrTableId);
-    } else {
-      setActiveTableId('table-1');
-    }
-    setDiscountPercentage(0);
-
-    // 0. Tải danh sách bàn ăn động của quán
-    const tablesStorageKey = `restaurant_tables_${tenant}`;
-    const savedTables = localStorage.getItem(tablesStorageKey);
-    let activeTablesList = [];
-    
-    if (savedTables) {
-      activeTablesList = JSON.parse(savedTables);
-      setTables(activeTablesList);
-    } else {
-      // Mặc định khởi tạo 12 bàn ăn ban đầu
-      const defaultTables = Array.from({ length: 12 }, (_, i) => ({
-        id: `table-${i + 1}`,
-        name: `Bàn ${String(i + 1).padStart(2, '0')}`
-      }));
-      activeTablesList = defaultTables;
-      setTables(defaultTables);
-      localStorage.setItem(tablesStorageKey, JSON.stringify(defaultTables));
-    }
-
-    // 1. Tải giỏ hàng của các bàn ăn (Tự động nâng cấp thêm cartItemId nếu chưa có)
-    const cartStorageKey = `restaurant_table_carts_${tenant}`;
-    const savedCarts = localStorage.getItem(cartStorageKey);
-    if (savedCarts) {
-      const parsedCarts = JSON.parse(savedCarts);
-      let needsMigration = false;
-      const migratedCarts = {};
-      Object.keys(parsedCarts).forEach((tableId) => {
-        migratedCarts[tableId] = (parsedCarts[tableId] || []).map((item) => {
-          if (!item.cartItemId) {
-            needsMigration = true;
-            return {
-              ...item,
-              cartItemId: `cart-item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-            };
-          }
-          return item;
-        });
+  // 1. Tải danh sách bàn ăn từ MongoDB qua Render API
+  const fetchTables = async () => {
+    if (!tenant || !restaurantId) return;
+    try {
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/tables?restaurantId=${restaurantId}&tenant=${tenant}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        }
       });
-      setTableCarts(migratedCarts);
-      if (needsMigration) {
-        localStorage.setItem(cartStorageKey, JSON.stringify(migratedCarts));
+      const data = await res.json();
+      if (data.success && data.data) {
+        const formatted = data.data.map(t => ({
+          id: t._id,
+          name: t.tableName,
+          status: t.status
+        }));
+        setTables(formatted);
+        
+        // Mặc định chọn bàn đầu tiên
+        const urlParams = new URLSearchParams(window.location.search);
+        const qrTableId = urlParams.get('table');
+        if (qrTableId) {
+          setActiveTableId(qrTableId);
+        } else if (formatted.length > 0 && !activeTableId) {
+          setActiveTableId(formatted[0].id);
+        }
       }
-    } else {
-      // Khởi tạo đối tượng rỗng cho các bàn ăn
-      const initialCarts = {};
-      activeTablesList.forEach((t) => {
-        initialCarts[t.id] = [];
-      });
-      setTableCarts(initialCarts);
-      localStorage.setItem(cartStorageKey, JSON.stringify(initialCarts));
-    }
-
-    // 2. Tải lịch sử đơn hàng
-    const orderStorageKey = `restaurant_orders_${tenant}`;
-    const savedOrders = localStorage.getItem(orderStorageKey);
-    if (savedOrders) {
-      setOrdersHistory(JSON.parse(savedOrders));
-    } else {
-      // Khởi tạo lịch sử đơn hàng trống cho quán mới
-      setOrdersHistory([]);
-      localStorage.setItem(orderStorageKey, JSON.stringify([]));
-    }
-
-    // 3. Tải trạng thái hình thức phục vụ (Dine-in / Takeaway) của từng bàn
-    const modesStorageKey = `restaurant_table_dining_modes_${tenant}`;
-    const savedModes = localStorage.getItem(modesStorageKey);
-    if (savedModes) {
-      setTableDiningModes(JSON.parse(savedModes));
-    } else {
-      setTableDiningModes({});
-    }
-
-    // 4. Tải thông tin đơn hàng (Metadata: thời gian bắt đầu, ngày, người phục vụ)
-    const metadataStorageKey = `restaurant_table_metadata_${tenant}`;
-    const savedMetadata = localStorage.getItem(metadataStorageKey);
-    if (savedMetadata) {
-      setTableOrderMetadata(JSON.parse(savedMetadata));
-    } else {
-      setTableOrderMetadata({});
-    }
-
-    // 5. Tải giỏ hàng nháp QR
-    const qrDraftStorageKey = `restaurant_qr_draft_carts_${tenant}`;
-    const savedQrDrafts = localStorage.getItem(qrDraftStorageKey);
-    if (savedQrDrafts) {
-      setQrDraftCarts(JSON.parse(savedQrDrafts));
-    } else {
-      setQrDraftCarts({});
-    }
-  }, [tenant]);
-
-  // Lắng nghe sự kiện storage để đồng bộ thời gian thực giữa các tab (POS, Admin, Kitchen, QR)
-  useEffect(() => {
-    if (!tenant) return;
-
-    const handleStorageChange = (e) => {
-      if (!e.key) return;
-
-      const tablesKey = `restaurant_tables_${tenant}`;
-      const cartsKey = `restaurant_table_carts_${tenant}`;
-      const ordersKey = `restaurant_orders_${tenant}`;
-      const modesKey = `restaurant_table_dining_modes_${tenant}`;
-      const metadataKey = `restaurant_table_metadata_${tenant}`;
-      const qrDraftKey = `restaurant_qr_draft_carts_${tenant}`;
-
-      if (e.key === tablesKey && e.newValue) {
-        setTables(JSON.parse(e.newValue));
-      } else if (e.key === cartsKey && e.newValue) {
-        setTableCarts(JSON.parse(e.newValue));
-      } else if (e.key === ordersKey && e.newValue) {
-        setOrdersHistory(JSON.parse(e.newValue));
-      } else if (e.key === modesKey && e.newValue) {
-        setTableDiningModes(JSON.parse(e.newValue));
-      } else if (e.key === metadataKey && e.newValue) {
-        setTableOrderMetadata(JSON.parse(e.newValue));
-      } else if (e.key === qrDraftKey && e.newValue) {
-        setQrDraftCarts(JSON.parse(e.newValue));
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [tenant]);
-
-  // Lưu giỏ hàng bàn ăn của quán hiện tại
-  const saveTableCartsToStorage = (updatedCarts) => {
-    if (tenant) {
-      localStorage.setItem(`restaurant_table_carts_${tenant}`, JSON.stringify(updatedCarts));
+    } catch (err) {
+      console.error('Error fetching tables:', err.message);
     }
   };
 
-  // Lưu lịch sử đơn hàng của quán hiện tại
-  const saveOrdersToStorage = (updatedOrders) => {
-    if (tenant) {
-      localStorage.setItem(`restaurant_orders_${tenant}`, JSON.stringify(updatedOrders));
+  // 2. Tải hóa đơn pending của bàn được chọn hiện tại
+  const fetchActiveOrder = async (tableId) => {
+    if (!tenant || !tableId) return;
+    try {
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/table/${tableId}?tenant=${tenant}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        }
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const order = data.data;
+        if (order._id && order.items) {
+          // Bàn đang có khách
+          const cartItems = order.items.map(item => ({
+            cartItemId: item.orderItemId,
+            product: {
+              id: item.productId?._id || item.productId || '',
+              name: item.name,
+              sellingPrice: item.price,
+              costPrice: item.productId?.costPrice || 0,
+              category: item.productId?.category || 'Món chính',
+              image: item.productId?.image || '',
+              status: 'active'
+            },
+            quantity: item.quantity,
+            served: item.status === 'completed',
+            dbOrderId: order._id
+          }));
+
+          setTableCarts(prev => ({ ...prev, [tableId]: cartItems }));
+          setTableOrderMetadata(prev => ({
+            ...prev,
+            [tableId]: {
+              startTime: new Date(order.createdAt).toLocaleTimeString('vi-VN'),
+              date: new Date(order.createdAt).toLocaleDateString('vi-VN'),
+              waiter: order.waiter || 'Thu ngân (DB)',
+              dbOrderId: order._id
+            }
+          }));
+          return;
+        }
+      }
+      
+      // Nếu không có order nào hoặc trống khách
+      setTableCarts(prev => ({ ...prev, [tableId]: [] }));
+      setTableOrderMetadata(prev => {
+        const copy = { ...prev };
+        delete copy[tableId];
+        return copy;
+      });
+    } catch (err) {
+      console.error('Error fetching active order:', err.message);
     }
   };
 
-  // Lấy giỏ hàng của bàn đang chọn hiện tại (Trong chế độ QR thì lấy giỏ nháp kết hợp giỏ chính thức)
+  // 3. Tải lịch sử đơn hàng đã thanh toán từ MongoDB phục vụ Dashboard
+  const fetchOrdersHistory = async () => {
+    if (!tenant || !restaurantId) return;
+    try {
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/history?restaurantId=${restaurantId}&tenant=${tenant}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        }
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const formatted = data.data.map(order => ({
+          orderId: order._id.toString().slice(-6).toUpperCase(), // 6 ký tự cuối làm mã ngắn gọn đẹp mắt
+          amount: order.finalAmount,
+          itemsCount: order.items.reduce((acc, item) => acc + item.quantity, 0),
+          items: order.items.map(item => ({
+            id: item.productId?._id || item.productId || '',
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          })),
+          timestamp: order.updatedAt
+        }));
+        setOrdersHistory(formatted);
+      }
+    } catch (err) {
+      console.error('Error fetching orders history:', err.message);
+    }
+  };
+
+  // Kích hoạt đồng bộ hóa khi chuyển đổi Bàn hoặc Quán
+  useEffect(() => {
+    fetchTables();
+    fetchOrdersHistory();
+  }, [tenant, restaurantId]);
+
+  useEffect(() => {
+    if (activeTableId) {
+      fetchActiveOrder(activeTableId);
+    }
+  }, [activeTableId, tenant]);
+
+  // Lấy giỏ hàng của bàn đang chọn hiện tại
   const currentCartItems = isQRMode 
     ? [
         ...(tableCarts[activeTableId] || []).map(item => ({ ...item, submitted: true })),
@@ -294,547 +262,304 @@ export const CartProvider = ({ children }) => {
       ]
     : (tableCarts[activeTableId] || []);
 
-  // Thêm món vào bàn hiện tại
-  const addToCart = (product) => {
-    if (product.status !== 'active') return;
-    
-    const currentItems = isQRMode 
-      ? (qrDraftCarts[activeTableId] || [])
-      : (tableCarts[activeTableId] || []);
-      
-    // Chỉ tìm món CHƯA được phục vụ (served: false) để tăng số lượng
-    const existing = currentItems.find((item) => item.product.id === product.id && !item.served);
-    let updatedItems;
-
-    if (existing) {
-      // Tăng số lượng của món chưa lên, giữ nguyên cartItemId
-      updatedItems = currentItems.map((item) =>
-        item.product.id === product.id && !item.served
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      );
-      if (!isQRMode) {
-        logActivity(tenant, 'Gọi món', `Bàn ${getActiveTableName()} gọi thêm số lượng: +1 ${product.name}`);
-      }
-    } else {
-      // Tạo entry mới (kể cả khi đã có món cùng loại nhưng đã tick served) với cartItemId độc nhất
-      const newItemId = `cart-item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      updatedItems = [...currentItems, { product, quantity: 1, served: false, cartItemId: newItemId }];
-      if (!isQRMode) {
-        logActivity(tenant, 'Gọi món', `Bàn ${getActiveTableName()} gọi món mới: ${product.name} (Số lượng: 1)`);
-      }
+  // Thêm bàn ăn mới qua API
+  const addTable = async (tableName) => {
+    if (!tableName.trim() || !restaurantId) {
+      return { success: false, message: 'Vui lòng cung cấp đầy đủ thông tin' };
     }
-
-    if (isQRMode) {
-      const updatedDrafts = {
-        ...qrDraftCarts,
-        [activeTableId]: updatedItems
-      };
-      setQrDraftCarts(updatedDrafts);
-      if (tenant) {
-        localStorage.setItem(`restaurant_qr_draft_carts_${tenant}`, JSON.stringify(updatedDrafts));
+    try {
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/tables?tenant=${tenant}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify({ tableName, restaurantId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchTables();
+        return { success: true };
+      } else {
+        return { success: false, message: data.message };
       }
-    } else {
-      const updatedCarts = {
-        ...tableCarts,
-        [activeTableId]: updatedItems
-      };
-      setTableCarts(updatedCarts);
-      saveTableCartsToStorage(updatedCarts);
-
-      // Ghi nhận thông tin đơn hàng (Metadata) khi bắt đầu order món ăn đầu tiên
-      if (currentItems.length === 0) {
-        const userStorage = localStorage.getItem('saas_current_user') || 'Nhân viên thu ngân';
-        const dateStr = new Date().toLocaleDateString('vi-VN');
-        const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        
-        const newMetadata = {
-          ...tableOrderMetadata,
-          [activeTableId]: {
-            startTime: timeStr,
-            date: dateStr,
-            waiter: userStorage
-          }
-        };
-        setTableOrderMetadata(newMetadata);
-        if (tenant) {
-          localStorage.setItem(`restaurant_table_metadata_${tenant}`, JSON.stringify(newMetadata));
-        }
-      }
+    } catch (err) {
+      return { success: false, message: err.message };
     }
   };
 
-  const updateQuantity = (cartItemId, quantity) => {
-    const currentItems = isQRMode
-      ? (qrDraftCarts[activeTableId] || [])
-      : (tableCarts[activeTableId] || []);
-      
+  // Xóa bàn ăn qua API
+  const deleteTable = async (tableId) => {
+    try {
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/tables/${tableId}?tenant=${tenant}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchTables();
+        return { success: true };
+      } else {
+        return { success: false, message: data.message };
+      }
+    } catch (err) {
+      return { success: false, message: err.message };
+    }
+  };
+
+  // Thêm món vào bàn hiện tại qua API
+  const addToCart = async (product) => {
+    if (!restaurantId || !activeTableId) return;
+    try {
+      if (isQRMode) {
+        const currentItems = qrDraftCarts[activeTableId] || [];
+        const existing = currentItems.find((item) => item.product.id === product.id && !item.served);
+        let updatedItems;
+        if (existing) {
+          updatedItems = currentItems.map((item) =>
+            item.product.id === product.id && !item.served
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          );
+        } else {
+          const newItemId = `cart-item-${Date.now()}`;
+          updatedItems = [...currentItems, { product, quantity: 1, served: false, cartItemId: newItemId }];
+        }
+        setQrDraftCarts(prev => ({ ...prev, [activeTableId]: updatedItems }));
+        return;
+      }
+
+      const payload = {
+        tableId: activeTableId,
+        restaurantId,
+        productId: product.id,
+        quantity: 1
+      };
+
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/add-item?tenant=${tenant}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchActiveOrder(activeTableId);
+        logActivity(tenant, 'Gọi món', `Bàn ${getActiveTableName()} gọi thêm món: ${product.name}`);
+      }
+    } catch (err) {
+      console.error('Error adding to cart:', err.message);
+    }
+  };
+
+  // Cập nhật số lượng của dòng món qua API
+  const updateQuantity = async (cartItemId, quantity) => {
     const val = isNaN(quantity) ? 0 : Math.max(0, Number(quantity));
     
-    // Tìm item cần update để lấy tên ghi nhận log
-    const targetItem = currentItems.find((item) => item.cartItemId === cartItemId);
-    
-    const updatedItems = currentItems.map((item) => {
-      if (item.cartItemId === cartItemId) {
-        return { ...item, quantity: val };
-      }
-      return item;
-    });
-
     if (isQRMode) {
-      const updatedDrafts = {
-        ...qrDraftCarts,
-        [activeTableId]: updatedItems
-      };
-      setQrDraftCarts(updatedDrafts);
-      if (tenant) {
-        localStorage.setItem(`restaurant_qr_draft_carts_${tenant}`, JSON.stringify(updatedDrafts));
-      }
-    } else {
-      const updatedCarts = {
-        ...tableCarts,
-        [activeTableId]: updatedItems
-      };
-      setTableCarts(updatedCarts);
-      saveTableCartsToStorage(updatedCarts);
+      const currentItems = qrDraftCarts[activeTableId] || [];
+      const updatedItems = currentItems.map((item) => {
+        if (item.cartItemId === cartItemId) {
+          return { ...item, quantity: val };
+        }
+        return item;
+      });
+      setQrDraftCarts(prev => ({ ...prev, [activeTableId]: updatedItems }));
+      return;
+    }
 
-      if (targetItem) {
-        logActivity(tenant, 'Thay đổi số lượng', `Bàn ${getActiveTableName()} cập nhật số lượng món ${targetItem.product.name} thành: ${val}`);
+    try {
+      if (val === 0) {
+        await removeFromCart(cartItemId);
+        return;
       }
+
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/update-item-qty?tenant=${tenant}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify({ orderItemId: cartItemId, quantity: val })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchActiveOrder(activeTableId);
+      }
+    } catch (err) {
+      console.error('Error updating quantity:', err.message);
     }
   };
 
-  // Xóa món khỏi bàn hiện tại dựa trên cartItemId
-  const removeFromCart = (cartItemId) => {
-    const currentItems = isQRMode
-      ? (qrDraftCarts[activeTableId] || [])
-      : (tableCarts[activeTableId] || []);
-      
-    const targetItem = currentItems.find((item) => item.cartItemId === cartItemId);
-    const updatedItems = currentItems.filter((item) => item.cartItemId !== cartItemId);
-
+  // Xóa dòng món khỏi đơn qua API
+  const removeFromCart = async (cartItemId) => {
     if (isQRMode) {
-      const updatedDrafts = {
-        ...qrDraftCarts,
-        [activeTableId]: updatedItems
-      };
-      setQrDraftCarts(updatedDrafts);
-      if (tenant) {
-        localStorage.setItem(`restaurant_qr_draft_carts_${tenant}`, JSON.stringify(updatedDrafts));
+      const currentItems = qrDraftCarts[activeTableId] || [];
+      const updatedItems = currentItems.filter((item) => item.cartItemId !== cartItemId);
+      setQrDraftCarts(prev => ({ ...prev, [activeTableId]: updatedItems }));
+      return;
+    }
+
+    try {
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/remove-item?tenant=${tenant}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify({ orderItemId: cartItemId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchActiveOrder(activeTableId);
       }
-    } else {
-      const updatedCarts = {
-        ...tableCarts,
-        [activeTableId]: updatedItems
-      };
-      setTableCarts(updatedCarts);
-      saveTableCartsToStorage(updatedCarts);
+    } catch (err) {
+      console.error('Error removing item:', err.message);
+    }
+  };
 
-      if (targetItem) {
-        logActivity(tenant, 'Xóa món ăn', `Bàn ${getActiveTableName()} xóa khỏi giỏ hàng món: ${targetItem.product.name}`);
+  // Đổi trạng thái nấu món của Bếp qua API
+  const toggleItemServed = async (cartItemId) => {
+    try {
+      const currentItems = tableCarts[activeTableId] || [];
+      const targetItem = currentItems.find((item) => item.cartItemId === cartItemId);
+      if (!targetItem) return;
+
+      const nextStatus = targetItem.served ? 'pending' : 'completed';
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/update-item-status?tenant=${tenant}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify({ orderItemId: cartItemId, status: nextStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchActiveOrder(activeTableId);
+        logActivity(tenant, 'Phục vụ món', `Bàn ${getActiveTableName()} đánh dấu món ${targetItem.product.name} là [${nextStatus === 'completed' ? 'ĐÃ PHỤC VỤ' : 'CHƯA PHỤC VỤ'}]`);
       }
+    } catch (err) {
+      console.error('Error toggling serve status:', err.message);
     }
   };
 
-  // Đảo ngược trạng thái đã phục vụ món ăn (Tick lên món) - cho bàn đang chọn dựa trên cartItemId
-  const toggleItemServed = (cartItemId) => {
-    if (isQRMode) return; // Khách quét QR không được tự tiện tick món!
-    
-    const currentItems = tableCarts[activeTableId] || [];
-    const targetItem = currentItems.find((item) => item.cartItemId === cartItemId);
-    
-    const updatedItems = currentItems.map((item) => {
-      if (item.cartItemId === cartItemId) {
-        return { ...item, served: !item.served };
+  // Đồng bộ cho KDS (Màn hình bếp) theo ID bàn bất kỳ
+  const toggleItemServedByTableId = async (tableId, cartItemId) => {
+    try {
+      const currentItems = tableCarts[tableId] || [];
+      const targetItem = currentItems.find((item) => item.cartItemId === cartItemId);
+      if (!targetItem) return;
+
+      const nextStatus = targetItem.served ? 'pending' : 'completed';
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/update-item-status?tenant=${tenant}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify({ orderItemId: cartItemId, status: nextStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchActiveOrder(tableId);
       }
-      return item;
-    });
-
-    const updatedCarts = {
-      ...tableCarts,
-      [activeTableId]: updatedItems
-    };
-
-    setTableCarts(updatedCarts);
-    saveTableCartsToStorage(updatedCarts);
-
-    if (targetItem) {
-      logActivity(tenant, 'Tick phục vụ', `Bàn ${getActiveTableName()} đánh dấu món ${targetItem.product.name} là [${!targetItem.served ? 'ĐÃ LÊN' : 'CHƯA LÊN'}]`);
+    } catch (err) {
+      console.error('Error toggling KDS serve status:', err.message);
     }
   };
 
-  // Đảo ngược trạng thái đã phục vụ món ăn theo tableId cụ thể (Dùng cho KDS ở Hub) dựa trên cartItemId
-  const toggleItemServedByTableId = (tableId, cartItemId) => {
-    const currentItems = tableCarts[tableId] || [];
-    const targetItem = currentItems.find((item) => item.cartItemId === cartItemId);
-    const tableObj = tables.find((t) => t.id === tableId);
-    const tableName = tableObj ? tableObj.name : `Bàn ${tableId}`;
+  // Gửi yêu cầu gọi món tự quét QR lên Bếp
+  const submitQROrder = async (tableId) => {
+    const draftItems = qrDraftCarts[tableId] || [];
+    if (draftItems.length === 0 || !restaurantId) return;
 
-    const updatedItems = currentItems.map((item) => {
-      if (item.cartItemId === cartItemId) {
-        return { ...item, served: !item.served };
+    try {
+      const itemsPayload = draftItems.map(item => ({
+        productId: item.product.id,
+        quantity: item.quantity
+      }));
+
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/customer-submit?tenant=${tenant}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify({
+          tableId,
+          restaurantId,
+          items: itemsPayload
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setQrDraftCarts(prev => ({ ...prev, [tableId]: [] }));
+        await fetchActiveOrder(tableId);
+        await fetchTables();
+        logActivity(tenant, 'QR Order', `Khách bàn ${getActiveTableName()} đã tự động gửi đơn xuống bếp`);
       }
-      return item;
-    });
-
-    const updatedCarts = {
-      ...tableCarts,
-      [tableId]: updatedItems
-    };
-
-    setTableCarts(updatedCarts);
-    saveTableCartsToStorage(updatedCarts);
-
-    if (targetItem) {
-      logActivity(tenant, 'Bếp làm món', `Bếp đã cập nhật trạng thái món ${targetItem.product.name} tại ${tableName} thành [${!targetItem.served ? 'ĐÃ HOÀN THÀNH' : 'ĐANG CHỜ LÀM'}]`);
+    } catch (err) {
+      console.error('Error submitting QR order:', err.message);
     }
   };
 
-  // Thêm bàn ăn mới vào sơ đồ
-  const addTable = (tableName) => {
-    if (!tableName.trim()) {
-      return { success: false, message: 'Tên bàn ăn không được để trống!' };
+  // Hoàn tất thanh toán VietQR & giải phóng bàn
+  const completeOrder = async (amount) => {
+    const meta = tableOrderMetadata[activeTableId];
+    if (!meta || !meta.dbOrderId) return;
+
+    try {
+      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/payments/verify-vietqr?tenant=${tenant}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify({ orderId: meta.dbOrderId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        logActivity(tenant, 'Thanh toán', `Bàn ${getActiveTableName()} đã thanh toán số tiền ${amount.toLocaleString('vi-VN')}đ`);
+        setDiscountPercentage(0);
+        await fetchActiveOrder(activeTableId);
+        await fetchTables();
+        await fetchOrdersHistory();
+        return { orderId: meta.dbOrderId.slice(-4) };
+      }
+    } catch (err) {
+      console.error('Error completing order:', err.message);
     }
-
-    const isExisted = tables.some(
-      (t) => t.name.toLowerCase() === tableName.trim().toLowerCase()
-    );
-
-    if (isExisted) {
-      return { success: false, message: `Tên bàn ăn "${tableName.trim()}" đã tồn tại!` };
-    }
-
-    const newTableId = `table-${Date.now()}`;
-    const newTable = {
-      id: newTableId,
-      name: tableName.trim()
-    };
-
-    const updatedTables = [...tables, newTable];
-    setTables(updatedTables);
-    if (tenant) {
-      localStorage.setItem(`restaurant_tables_${tenant}`, JSON.stringify(updatedTables));
-    }
-
-    // Thêm giỏ hàng rỗng cho bàn mới
-    const updatedCarts = {
-      ...tableCarts,
-      [newTableId]: []
-    };
-    setTableCarts(updatedCarts);
-    saveTableCartsToStorage(updatedCarts);
-
-    return { success: true };
   };
 
-  // Xóa bàn ăn khỏi sơ đồ (Chỉ cho xóa bàn trống)
-  const deleteTable = (tableId) => {
-    const currentItems = tableCarts[tableId] || [];
-    if (currentItems.length > 0) {
-      return { success: false, message: 'Bàn ăn đang có khách phục vụ, không thể xóa!' };
-    }
-
-    const updatedTables = tables.filter((t) => t.id !== tableId);
-    setTables(updatedTables);
-    if (tenant) {
-      localStorage.setItem(`restaurant_tables_${tenant}`, JSON.stringify(updatedTables));
-    }
-
-    // Xóa giỏ hàng của bàn
-    const updatedCarts = { ...tableCarts };
-    delete updatedCarts[tableId];
-    setTableCarts(updatedCarts);
-    saveTableCartsToStorage(updatedCarts);
-
-    // Nếu bàn ăn bị xóa là bàn đang chọn ở POS, đổi sang bàn khác
-    if (activeTableId === tableId) {
-      const remainingTable = updatedTables[0];
-      setActiveTableId(remainingTable ? remainingTable.id : '');
-    }
-
-    return { success: true };
-  };
-
-  // Xóa sạch giỏ hàng của bàn hiện tại
   const clearCart = () => {
     if (isQRMode) {
-      const updatedDrafts = {
-        ...qrDraftCarts,
-        [activeTableId]: []
-      };
-      setQrDraftCarts(updatedDrafts);
-      if (tenant) {
-        localStorage.setItem(`restaurant_qr_draft_carts_${tenant}`, JSON.stringify(updatedDrafts));
-      }
+      setQrDraftCarts(prev => ({ ...prev, [activeTableId]: [] }));
     } else {
-      const updatedCarts = {
-        ...tableCarts,
-        [activeTableId]: []
-      };
-
-      setTableCarts(updatedCarts);
-      saveTableCartsToStorage(updatedCarts);
-      setDiscountPercentage(0);
-
-      // Xóa thông tin đơn hàng (Metadata) tương ứng
-      const updatedMetadata = { ...tableOrderMetadata };
-      delete updatedMetadata[activeTableId];
-      setTableOrderMetadata(updatedMetadata);
-      if (tenant) {
-        localStorage.setItem(`restaurant_table_metadata_${tenant}`, JSON.stringify(updatedMetadata));
-      }
+      setTableCarts(prev => ({ ...prev, [activeTableId]: [] }));
     }
   };
 
-  // Hoàn tất đơn hàng cho bàn hiện tại (Thanh toán)
-  const completeOrder = (amount) => {
-    const currentItems = tableCarts[activeTableId] || [];
-    const activeTable = tables.find((t) => t.id === activeTableId);
-    const tableName = activeTable ? activeTable.name : 'Bàn ẩn';
-
-    const newOrder = {
-      orderId: `ORD-${Date.now().toString().slice(-4)}`,
-      amount,
-      itemsCount: currentItems.reduce((acc, curr) => acc + curr.quantity, 0),
-      items: currentItems.map((item) => ({
-        id: item.product.id,
-        name: item.product.name,
-        price: item.product.sellingPrice,
-        quantity: item.quantity
-      })),
-      tableName: tableName, // Ghi nhận số bàn vào hóa đơn!
-      timestamp: new Date().toISOString()
-    };
-    
-    // 1. Lưu vào lịch sử đơn hàng
-    const updatedOrders = [newOrder, ...ordersHistory];
-    setOrdersHistory(updatedOrders);
-    saveOrdersToStorage(updatedOrders);
-
-    // 2. Làm sạch giỏ hàng của bàn hiện tại
-    const updatedCarts = {
-      ...tableCarts,
-      [activeTableId]: []
-    };
-    setTableCarts(updatedCarts);
-    saveTableCartsToStorage(updatedCarts);
-
-    // Xóa thông tin đơn hàng (Metadata) tương ứng
-    const updatedMetadata = { ...tableOrderMetadata };
-    delete updatedMetadata[activeTableId];
-    setTableOrderMetadata(updatedMetadata);
-    if (tenant) {
-      localStorage.setItem(`restaurant_table_metadata_${tenant}`, JSON.stringify(updatedMetadata));
-    }
-
-    // Ghi nhận nhật ký hoạt động
-    logActivity(tenant, 'Thanh toán', `Thanh toán hóa đơn ${newOrder.orderId} tại ${tableName} số tiền ${amount.toLocaleString('vi-VN')}đ`);
-
-
-    setDiscountPercentage(0);
-    return newOrder;
-  };
-
-  // Đặt trạng thái hình thức phục vụ (Ngồi ăn / Mang đi) cho bàn ăn
-  const setDiningMode = (tableId, mode) => {
-    const updatedModes = {
-      ...tableDiningModes,
-      [tableId]: mode
-    };
-    setTableDiningModes(updatedModes);
-    if (tenant) {
-      localStorage.setItem(`restaurant_table_dining_modes_${tenant}`, JSON.stringify(updatedModes));
-    }
-  };
-
-  // Chuyển đổi toàn bộ bàn ăn (giỏ hàng và hình thức phục vụ) sang bàn mới
-  const transferTable = (fromTableId, toTableId) => {
-    if (fromTableId === toTableId) {
-      return { success: false, message: 'Bàn cũ và bàn mới trùng nhau!' };
-    }
-
-    const fromCart = tableCarts[fromTableId] || [];
-    const toCart = tableCarts[toTableId] || [];
-
-    // Gộp giỏ hàng của bàn cũ vào bàn mới
-    const mergedCart = [...toCart];
-    fromCart.forEach((fromItem) => {
-      const existing = mergedCart.find((toItem) => toItem.product.id === fromItem.product.id);
-      if (existing) {
-        existing.quantity += fromItem.quantity;
-        existing.served = existing.served || fromItem.served;
-      } else {
-        mergedCart.push({ ...fromItem });
-      }
-    });
-
-    const updatedCarts = {
-      ...tableCarts,
-      [toTableId]: mergedCart,
-      [fromTableId]: []
-    };
-
-    setTableCarts(updatedCarts);
-    saveTableCartsToStorage(updatedCarts);
-
-    // Chuyển hình thức phục vụ sang bàn mới
-    const updatedModes = {
-      ...tableDiningModes,
-      [toTableId]: tableDiningModes[fromTableId] || 'dine-in',
-      [fromTableId]: 'dine-in'
-    };
-    setTableDiningModes(updatedModes);
-    if (tenant) {
-      localStorage.setItem(`restaurant_table_dining_modes_${tenant}`, JSON.stringify(updatedModes));
-    }
-
-    // Chuyển thông tin đơn hàng (Metadata) sang bàn mới
-    const updatedMetadata = { ...tableOrderMetadata };
-    if (updatedMetadata[fromTableId]) {
-      updatedMetadata[toTableId] = updatedMetadata[fromTableId];
-    }
-    delete updatedMetadata[fromTableId];
-    setTableOrderMetadata(updatedMetadata);
-    if (tenant) {
-      localStorage.setItem(`restaurant_table_metadata_${tenant}`, JSON.stringify(updatedMetadata));
-    }
-
-    // Đổi bàn đang chọn ở POS sang bàn mới
-    setActiveTableId(toTableId);
-
-    return { success: true };
-  };
-
-  // Gộp bàn ăn (gộp giỏ hàng và gộp thông tin đơn hàng)
-  const mergeTables = (fromTableId, toTableId) => {
-    if (fromTableId === toTableId) {
-      return { success: false, message: 'Bàn cũ và bàn mới trùng nhau!' };
-    }
-
-    const fromCart = tableCarts[fromTableId] || [];
-    const toCart = tableCarts[toTableId] || [];
-
-    if (fromCart.length === 0) {
-      return { success: false, message: 'Bàn hiện tại không có món ăn để gộp!' };
-    }
-
-    // Gộp giỏ hàng của bàn cũ vào bàn mới
-    const mergedCart = [...toCart];
-    fromCart.forEach((fromItem) => {
-      const existing = mergedCart.find((toItem) => toItem.product.id === fromItem.product.id);
-      if (existing) {
-        existing.quantity += fromItem.quantity;
-        existing.served = existing.served || fromItem.served;
-      } else {
-        mergedCart.push({ ...fromItem });
-      }
-    });
-
-    const updatedCarts = {
-      ...tableCarts,
-      [toTableId]: mergedCart,
-      [fromTableId]: []
-    };
-
-    setTableCarts(updatedCarts);
-    saveTableCartsToStorage(updatedCarts);
-
-    // Gộp hình thức phục vụ: Bàn nhận kế thừa hình thức bàn cũ nếu bàn nhận chưa được thiết lập
-    const updatedModes = {
-      ...tableDiningModes,
-      [toTableId]: tableDiningModes[toTableId] || tableDiningModes[fromTableId] || 'dine-in',
-      [fromTableId]: 'dine-in'
-    };
-    setTableDiningModes(updatedModes);
-    if (tenant) {
-      localStorage.setItem(`restaurant_table_dining_modes_${tenant}`, JSON.stringify(updatedModes));
-    }
-
-    // Gộp thông tin đơn hàng (Metadata)
-    const updatedMetadata = { ...tableOrderMetadata };
-    if (!updatedMetadata[toTableId] && updatedMetadata[fromTableId]) {
-      updatedMetadata[toTableId] = updatedMetadata[fromTableId];
-    }
-    delete updatedMetadata[fromTableId];
-    setTableOrderMetadata(updatedMetadata);
-    if (tenant) {
-      localStorage.setItem(`restaurant_table_metadata_${tenant}`, JSON.stringify(updatedMetadata));
-    }
-
-    // Đổi bàn đang chọn ở POS sang bàn mới
-    setActiveTableId(toTableId);
-
-    return { success: true };
-  };
-
-  // Xác nhận gọi món từ QR, cập nhật trạng thái bàn và ghi log hoạt động
-  const submitQROrder = (tableId) => {
-    const draftItems = qrDraftCarts[tableId] || [];
-    if (draftItems.length === 0) return;
-
-    // Lấy giỏ hàng chính thức hiện tại của bàn
-    const currentOfficialItems = tableCarts[tableId] || [];
-
-    // Gộp trùng món từ draft vào giỏ hàng chính thức
-    const mergedOfficialItems = [...currentOfficialItems];
-    draftItems.forEach((draftItem) => {
-      const existing = mergedOfficialItems.find(
-        (item) => item.product.id === draftItem.product.id && !item.served
-      );
-      if (existing) {
-        existing.quantity += draftItem.quantity;
-      } else {
-        mergedOfficialItems.push({ ...draftItem });
-      }
-    });
-
-    const updatedCarts = {
-      ...tableCarts,
-      [tableId]: mergedOfficialItems
-    };
-
-    setTableCarts(updatedCarts);
-    saveTableCartsToStorage(updatedCarts);
-
-    // Xóa giỏ hàng nháp sau khi đã gửi đi thành công
-    const updatedDrafts = {
-      ...qrDraftCarts,
-      [tableId]: []
-    };
-    setQrDraftCarts(updatedDrafts);
-    if (tenant) {
-      localStorage.setItem(`restaurant_qr_draft_carts_${tenant}`, JSON.stringify(updatedDrafts));
-    }
-
-    // Ghi nhận thông tin đơn hàng (Metadata)
-    const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const dateStr = new Date().toLocaleDateString('vi-VN');
-    
-    const existingMeta = tableOrderMetadata[tableId] || {};
-    const newMetadata = {
-      ...tableOrderMetadata,
-      [tableId]: {
-        startTime: existingMeta.startTime || timeStr,
-        date: dateStr,
-        waiter: 'Khách tự gọi (QR)',
-        status: 'active'
-      }
-    };
-    
-    setTableOrderMetadata(newMetadata);
-    if (tenant) {
-      localStorage.setItem(`restaurant_table_metadata_${tenant}`, JSON.stringify(newMetadata));
-    }
-    
-    const tableName = tables.find((t) => t.id === tableId)?.name || tableId;
-    const itemsSummary = draftItems.map(i => `${i.product.name} (x${i.quantity})`).join(', ');
-    logActivity(tenant, 'Gọi món', `Khách quét QR tại ${tableName} đã gửi đơn xuống bếp: ${itemsSummary}`);
-  };
-
-  // Lấy tên bàn hiện tại đang chọn
   const getActiveTableName = () => {
     const found = tables.find((t) => t.id === activeTableId);
     return found ? found.name : 'Bàn 01';
+  };
+
+  const setDiningMode = (tableId, mode) => {
+    setTableDiningModes(prev => ({ ...prev, [tableId]: mode }));
+  };
+
+  const transferTable = (fromTableId, toTableId) => {
+    return { success: false, message: 'Tính năng chuyển gộp bàn trực tiếp trên database đang được cập nhật' };
+  };
+
+  const mergeTables = (fromTableId, toTableId) => {
+    return { success: false, message: 'Tính năng gộp bàn trực tiếp trên database đang được cập nhật' };
   };
 
   return (
@@ -842,12 +567,12 @@ export const CartProvider = ({ children }) => {
       <CartContext.Provider
         value={{
           isQRMode,
-          tables: tables, // Sử dụng state động
+          tables: tables, 
           activeTableId,
           setActiveTableId,
           activeTableName: getActiveTableName(),
           tableCarts,
-          cartItems: currentCartItems, // Tự động trả về giỏ của bàn đang chọn
+          cartItems: currentCartItems, 
           discountPercentage,
           setDiscountPercentage,
           taxPercentage,
@@ -857,8 +582,8 @@ export const CartProvider = ({ children }) => {
           updateQuantity,
           removeFromCart,
           toggleItemServed,
-          addTable, // Xuất bản hàm thêm bàn
-          deleteTable, // Xuất bản hàm xóa bàn
+          addTable, 
+          deleteTable, 
           clearCart,
           completeOrder,
           tableDiningModes,
@@ -868,8 +593,8 @@ export const CartProvider = ({ children }) => {
           mergeTables,
           tableOrderMetadata,
           activeOrderMetadata: tableOrderMetadata[activeTableId],
-          toggleItemServedByTableId, // KDS: Tick món theo tableId bất kỳ
-          submitQROrder // Gửi đơn QR & Cập nhật trạng thái
+          toggleItemServedByTableId, 
+          submitQROrder 
         }}
       >
         {children}

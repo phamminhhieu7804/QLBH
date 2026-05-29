@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 // Map lưu trữ các kết nối DB của các quán để tránh mở kết nối mới liên tục (Connection Pool Cache)
 const connections = {};
+let baseConnection = null;
 
 // Hàm kết nối động lấy Connection riêng của Quán (Tenant)
 export const getTenantConnection = (tenantCode) => {
@@ -15,23 +16,27 @@ export const getTenantConnection = (tenantCode) => {
     return connections[dbName];
   }
   
-  // Khởi tạo kết nối mới độc lập vật lý tới MongoDB của quán này
-  const uri = process.env.MONGODB_URI_PREFIX || 'mongodb://127.0.0.1:27017/';
-  const connectionString = `${uri}${dbName}`;
+  // 1. Khởi tạo kết nối cơ sở (Base Connection) nếu chưa có
+  if (!baseConnection) {
+    const uri = process.env.MONGODB_URI || process.env.MONGODB_URI_PREFIX || 'mongodb://127.0.0.1:27017/admin';
+    console.log(`[Multi-Tenant] Đang mở kết nối cơ sở tới MongoDB Atlas/Server...`);
+    baseConnection = mongoose.createConnection(uri, {
+      serverSelectionTimeoutMS: 8000
+    });
+    
+    baseConnection.on('connected', () => {
+      console.log(`[Multi-Tenant] Đã kết nối cơ sở tới MongoDB thành công!`);
+    });
+    
+    baseConnection.on('error', (err) => {
+      console.error(`[Multi-Tenant] Lỗi kết nối cơ sở tới MongoDB: ${err.message}`);
+    });
+  }
   
-  console.log(`[Multi-Tenant] Đang khởi tạo kết nối mới tới Database: ${dbName}...`);
-  
-  const connection = mongoose.createConnection(connectionString, {
-    serverSelectionTimeoutMS: 5000 // Chờ tối đa 5 giây
-  });
-  
-  connection.on('connected', () => {
-    console.log(`[Multi-Tenant] Đã kết nối thành công tới Database riêng: ${dbName}`);
-  });
-  
-  connection.on('error', (err) => {
-    console.error(`[Multi-Tenant] Lỗi kết nối Database ${dbName}: ${err.message}`);
-  });
+  // 2. Sử dụng useDb của Mongoose để tạo kết nối riêng ảo trên cùng 1 TCP pool
+  // Thiết lập useCache: true để Mongoose tự quản lý cache connection, tránh overload socket
+  console.log(`[Multi-Tenant] Đang phân tuyến cơ sở dữ liệu động: ${dbName}...`);
+  const connection = baseConnection.useDb(dbName, { useCache: true });
   
   // Lưu vào Pool Cache để tái sử dụng
   connections[dbName] = connection;
@@ -40,9 +45,27 @@ export const getTenantConnection = (tenantCode) => {
 
 // Dummy log kết nối khi khởi động hệ thống
 export const connectDB = async () => {
+  const uri = process.env.MONGODB_URI || process.env.MONGODB_URI_PREFIX || 'mongodb://127.0.0.1:27017/admin';
+  // Giấu mật khẩu trong log để bảo mật
+  const maskedUri = uri.replace(/:([^@]+)@/, ':****@');
+  
   console.log(`=======================================================`);
   console.log(`[Multi-Tenant] Connection Pool Manager khởi động ONLINE!`);
-  console.log(`[Multi-Tenant] Hệ thống kết nối động Multi-Database sẵn sàng.`);
+  console.log(`[Multi-Tenant] Địa chỉ MongoDB: ${maskedUri}`);
+  
+  if (!baseConnection) {
+    baseConnection = mongoose.createConnection(uri, {
+      serverSelectionTimeoutMS: 8000
+    });
+    
+    baseConnection.on('connected', () => {
+      console.log(`[Multi-Tenant] Kết nối cơ sở MongoDB Atlas thành công!`);
+    });
+    
+    baseConnection.on('error', (err) => {
+      console.error(`[Multi-Tenant] Lỗi kết nối cơ sở MongoDB Atlas: ${err.message}`);
+    });
+  }
   console.log(`=======================================================`);
 };
 
@@ -79,6 +102,26 @@ export const RestaurantSchema = new mongoose.Schema(
         type: Number,
         default: null
       }
+    },
+    bankId: {
+      type: String,
+      default: ''
+    },
+    customBank: {
+      type: String,
+      default: ''
+    },
+    bankAccountNo: {
+      type: String,
+      default: ''
+    },
+    bankAccountName: {
+      type: String,
+      default: ''
+    },
+    bankFullName: {
+      type: String,
+      default: ''
     }
   },
   { timestamps: true }

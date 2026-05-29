@@ -122,6 +122,229 @@ export const TenantProvider = ({ children }) => {
     return false; // Mặc định không tự động đăng nhập khi vào, hiện trang Đăng nhập
   });
 
+  // State quản lý restaurantId từ database MongoDB riêng biệt
+  const [restaurantId, setRestaurantId] = useState(() => {
+    return localStorage.getItem(`saas_restaurant_id_${localStorage.getItem('saas_current_tenant') || ''}`) || '';
+  });
+
+  // State cấu hình ngân hàng phản ứng nhanh
+  const [bankId, setBankId] = useState(() => {
+    const currentTenant = localStorage.getItem('saas_current_tenant') || '';
+    return localStorage.getItem(`saas_bank_id_${currentTenant}`) || '';
+  });
+
+  const [customBank, setCustomBank] = useState(() => {
+    const currentTenant = localStorage.getItem('saas_current_tenant') || '';
+    return localStorage.getItem(`saas_custom_bank_${currentTenant}`) || '';
+  });
+
+  const [bankAccountNo, setBankAccountNo] = useState(() => {
+    const currentTenant = localStorage.getItem('saas_current_tenant') || '';
+    return localStorage.getItem(`saas_bank_account_no_${currentTenant}`) || '';
+  });
+
+  const [bankAccountName, setBankAccountName] = useState(() => {
+    const currentTenant = localStorage.getItem('saas_current_tenant') || '';
+    return localStorage.getItem(`saas_bank_account_name_${currentTenant}`) || '';
+  });
+
+  const [bankFullName, setBankFullName] = useState(() => {
+    const currentTenant = localStorage.getItem('saas_current_tenant') || '';
+    return localStorage.getItem(`saas_bank_full_name_${currentTenant}`) || '';
+  });
+
+  const [isBackendConnecting, setIsBackendConnecting] = useState(false);
+  const [backendError, setBackendError] = useState(null);
+
+  // Tự động đồng bộ và lấy restaurantId + cấu hình ngân hàng từ MongoDB khi tenant đổi (có cơ chế Auto-Retry)
+  useEffect(() => {
+    if (!tenant) {
+      setRestaurantId('');
+      setIsBackendConnecting(false);
+      setBackendError(null);
+      setBankId('');
+      setCustomBank('');
+      setBankAccountNo('');
+      setBankAccountName('');
+      setBankFullName('');
+      return;
+    }
+
+    // Tải trước từ LocalStorage để hiện lập tức (Cache)
+    setBankId(localStorage.getItem(`saas_bank_id_${tenant}`) || '');
+    setCustomBank(localStorage.getItem(`saas_custom_bank_${tenant}`) || '');
+    setBankAccountNo(localStorage.getItem(`saas_bank_account_no_${tenant}`) || '');
+    setBankAccountName(localStorage.getItem(`saas_bank_account_name_${tenant}`) || '');
+    setBankFullName(localStorage.getItem(`saas_bank_full_name_${tenant}`) || '');
+
+    const fetchRestaurantInfo = async () => {
+      setIsBackendConnecting(true);
+      setBackendError(null);
+      let attempts = 0;
+      const maxAttempts = 15; // 15 attempts * 5s = 75 seconds max wait for Render wake up
+      
+      const tryFetch = async () => {
+        try {
+          const res = await fetch(`https://qlbh-zsvr.onrender.com/api/restaurant?tenant=${tenant}`, {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-tenant': tenant
+            }
+          });
+          const data = await res.json();
+          if (data.success && data.data) {
+            const id = data.data._id;
+            setRestaurantId(id);
+            localStorage.setItem(`saas_restaurant_id_${tenant}`, id);
+
+            // Đồng bộ dữ liệu cấu hình ngân hàng từ Database
+            const bId = data.data.bankId || '';
+            const cBank = data.data.customBank || '';
+            const accNo = data.data.bankAccountNo || '';
+            const accName = data.data.bankAccountName || '';
+            const fName = data.data.bankFullName || '';
+
+            setBankId(bId);
+            setCustomBank(cBank);
+            setBankAccountNo(accNo);
+            setBankAccountName(accName);
+            setBankFullName(fName);
+
+            localStorage.setItem(`saas_bank_id_${tenant}`, bId);
+            localStorage.setItem(`saas_custom_bank_${tenant}`, cBank);
+            localStorage.setItem(`saas_bank_account_no_${tenant}`, accNo);
+            localStorage.setItem(`saas_bank_account_name_${tenant}`, accName);
+            localStorage.setItem(`saas_bank_full_name_${tenant}`, fName);
+
+            // Đồng bộ cấu hình vốn & chỉ tiêu nếu có
+            if (data.data.config) {
+              if (data.data.config.initialInvestment !== null && data.data.config.initialInvestment !== undefined) {
+                localStorage.setItem(`saas_restaurant_capital_${tenant}`, data.data.config.initialInvestment);
+              }
+              if (data.data.config.targetProfitMargin !== null && data.data.config.targetProfitMargin !== undefined) {
+                localStorage.setItem(`saas_restaurant_target_profit_rate_${tenant}`, data.data.config.targetProfitMargin);
+              }
+            }
+
+            setIsBackendConnecting(false);
+            setBackendError(null);
+            console.log('[Tenant DB Connection] Connected and synchronized successfully to tenant database!');
+            return;
+          }
+        } catch (err) {
+          attempts++;
+          console.warn(`[Tenant DB Connection] Attempt ${attempts} failed. Render server might be sleeping. Retrying in 5s...`);
+          if (attempts < maxAttempts) {
+            setTimeout(tryFetch, 5000);
+          } else {
+            setIsBackendConnecting(false);
+            setBackendError('Máy chủ dữ liệu không phản hồi. Vui lòng xác minh cấu hình MongoDB của Render Backend!');
+          }
+        }
+      };
+
+      tryFetch();
+    };
+
+    fetchRestaurantInfo();
+  }, [tenant]);
+
+  // Lưu cấu hình ngân hàng lên cơ sở dữ liệu MongoDB thông qua Backend
+  const saveBankConfig = async (newBankId, newCustomBank, newBankAccountNo, newBankAccountName) => {
+    if (!tenant || !restaurantId) return { success: false, message: 'Chưa kết nối cơ sở dữ liệu!' };
+
+    let resolvedFullName = '';
+    if (newBankId === 'custom') {
+      if (!newCustomBank.trim()) {
+        return { success: false, message: 'Vui lòng điền tên ngân hàng tự thêm!' };
+      }
+      resolvedFullName = newCustomBank.trim();
+    } else {
+      const bankOptions = {
+        'tpb': 'TPBank',
+        'vcb': 'Vietcombank',
+        'mb': 'MBBank',
+        'tcb': 'Techcombank',
+        'acb': 'ACB',
+        'bidv': 'BIDV',
+        'vietinbank': 'Vietinbank',
+        'vpb': 'VPBank'
+      };
+      resolvedFullName = bankOptions[newBankId] || '';
+    }
+
+    try {
+      const res = await fetch('https://qlbh-zsvr.onrender.com/api/restaurant/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify({
+          restaurantId,
+          bankId: newBankId,
+          customBank: newCustomBank,
+          bankAccountNo: newBankAccountNo,
+          bankAccountName: newBankAccountName,
+          bankFullName: resolvedFullName
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Cập nhật State phản ứng nhanh
+        setBankId(newBankId);
+        setCustomBank(newCustomBank);
+        setBankAccountNo(newBankAccountNo);
+        setBankAccountName(newBankAccountName);
+        setBankFullName(resolvedFullName);
+
+        // Lưu LocalStorage dự phòng
+        localStorage.setItem(`saas_bank_id_${tenant}`, newBankId);
+        localStorage.setItem(`saas_custom_bank_${tenant}`, newCustomBank);
+        localStorage.setItem(`saas_bank_account_no_${tenant}`, newBankAccountNo);
+        localStorage.setItem(`saas_bank_account_name_${tenant}`, newBankAccountName);
+        localStorage.setItem(`saas_bank_full_name_${tenant}`, resolvedFullName);
+
+        return { success: true };
+      } else {
+        return { success: false, message: data.message || 'Lỗi cập nhật cấu hình ngân hàng' };
+      }
+    } catch (err) {
+      console.error('[TenantContext] Error saving bank config:', err);
+      return { success: false, message: 'Không thể kết nối đến máy chủ!' };
+    }
+  };
+
+  // Lưu chỉ tiêu tài chính lên cơ sở dữ liệu MongoDB
+  const saveFinancialConfig = async (capital, rate) => {
+    if (!tenant || !restaurantId) return { success: false, message: 'Chưa kết nối cơ sở dữ liệu!' };
+    try {
+      const res = await fetch('https://qlbh-zsvr.onrender.com/api/restaurant/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant': tenant
+        },
+        body: JSON.stringify({
+          restaurantId,
+          initialInvestment: capital,
+          targetProfitMargin: rate
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem(`saas_restaurant_capital_${tenant}`, capital);
+        localStorage.setItem(`saas_restaurant_target_profit_rate_${tenant}`, rate);
+        return { success: true };
+      }
+      return { success: false, message: data.message || 'Lỗi cập nhật cấu hình tài chính' };
+    } catch (err) {
+      console.error('[TenantContext] Error saving financial config:', err);
+      return { success: false, message: 'Không thể kết nối đến máy chủ!' };
+    }
+  };
+
   // Danh sách toàn bộ tài khoản đăng ký trong hệ thống
   const [registeredUsers, setRegisteredUsers] = useState(() => {
     const saved = localStorage.getItem('saas_registered_users');
@@ -259,6 +482,9 @@ export const TenantProvider = ({ children }) => {
       value={{
         tenant,
         tenantName: getTenantName(),
+        restaurantId,
+        isBackendConnecting,
+        backendError,
         user,
         role,
         isLoggedIn,
@@ -267,7 +493,14 @@ export const TenantProvider = ({ children }) => {
         logout,
         convertToSlug,
         registeredUsers,
-        updateStaffDetails
+        updateStaffDetails,
+        bankId,
+        customBank,
+        bankAccountNo,
+        bankAccountName,
+        bankFullName,
+        saveBankConfig,
+        saveFinancialConfig
       }}
     >
       {children}

@@ -78,3 +78,24 @@ export const createTable = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi tạo bàn', error: error.message });
   }
 };
+
+// [DELETE] /api/tables/:id
+// Xóa bàn ăn khỏi danh sách
+export const deleteTable = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Table = req.tenantDb.model('Table', TableSchema);
+
+    const table = await Table.findByIdAndDelete(id);
+    if (!table) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bàn ăn cần xóa' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Đã xóa thành công bàn ăn: ${table.tableName}`
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi xóa bàn ăn', error: error.message });
+  }
+};

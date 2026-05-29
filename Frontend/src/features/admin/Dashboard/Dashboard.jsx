@@ -22,8 +22,18 @@ import styles from './Dashboard.module.css';
 // Trang tổng quan doanh thu & thống kê (Admin Dashboard)
 export const Dashboard = () => {
   const { ordersHistory } = useContext(CartContext);
-  const { tenant } = useContext(TenantContext);
   const { menuItems } = useContext(MenuContext);
+
+  const { 
+    tenant, 
+    restaurantId, 
+    bankId: contextBankId, 
+    customBank: contextCustomBank, 
+    bankAccountNo: contextBankAccountNo, 
+    bankAccountName: contextBankAccountName,
+    saveBankConfig,
+    saveFinancialConfig
+  } = useContext(TenantContext);
 
   // --- STATE CẤU HÌNH VỐN & CHỈ TIÊU ---
   const [initialCapital, setInitialCapital] = useState(() => {
@@ -37,79 +47,57 @@ export const Dashboard = () => {
   });
 
   // --- STATE CẤU HÌNH TÀI KHOẢN NGÂN HÀNG NHẬN TIỀN ---
-  const [bankId, setBankId] = useState(() => {
-    const saved = localStorage.getItem(`saas_bank_id_${tenant}`);
-    return saved !== null ? saved : '';
-  });
+  const [bankId, setBankId] = useState(contextBankId || '');
+  const [customBank, setCustomBank] = useState(contextCustomBank || '');
+  const [bankAccountNo, setBankAccountNo] = useState(contextBankAccountNo || '');
+  const [bankAccountName, setBankAccountName] = useState(contextBankAccountName || '');
 
-  const [customBank, setCustomBank] = useState(() => {
-    const saved = localStorage.getItem(`saas_custom_bank_${tenant}`);
-    return saved !== null ? saved : '';
-  });
+  // Đồng bộ hóa cấu hình ngân hàng khi chuyển đổi Tenant hoặc khi context cập nhật từ DB
+  useEffect(() => {
+    setBankId(contextBankId || '');
+    setCustomBank(contextCustomBank || '');
+    setBankAccountNo(contextBankAccountNo || '');
+    setBankAccountName(contextBankAccountName || '');
+  }, [contextBankId, contextCustomBank, contextBankAccountNo, contextBankAccountName, tenant]);
 
-  const [bankAccountNo, setBankAccountNo] = useState(() => {
-    const saved = localStorage.getItem(`saas_bank_account_no_${tenant}`);
-    return saved !== null ? saved : '';
-  });
-
-  const [bankAccountName, setBankAccountName] = useState(() => {
-    const saved = localStorage.getItem(`saas_bank_account_name_${tenant}`);
-    return saved !== null ? saved : '';
-  });
-
-  // Đồng bộ hóa cấu hình ngân hàng khi chuyển đổi Tenant
+  // Đồng bộ hóa cấu hình vốn & chỉ tiêu từ LocalStorage khi chuyển đổi Tenant
   useEffect(() => {
     if (tenant) {
-      const savedBankId = localStorage.getItem(`saas_bank_id_${tenant}`);
-      const savedCustomBank = localStorage.getItem(`saas_custom_bank_${tenant}`);
-      const savedAccountNo = localStorage.getItem(`saas_bank_account_no_${tenant}`);
-      const savedAccountName = localStorage.getItem(`saas_bank_account_name_${tenant}`);
-      
-      setBankId(savedBankId !== null ? savedBankId : '');
-      setCustomBank(savedCustomBank !== null ? savedCustomBank : '');
-      setBankAccountNo(savedAccountNo !== null ? savedAccountNo : '');
-      setBankAccountName(savedAccountName !== null ? savedAccountName : '');
+      const savedCapital = localStorage.getItem(`saas_restaurant_capital_${tenant}`);
+      const savedRate = localStorage.getItem(`saas_restaurant_target_profit_rate_${tenant}`);
+      setInitialCapital(savedCapital !== null && savedCapital !== "" ? Number(savedCapital) : 1000000);
+      setTargetProfitRate(savedRate !== null && savedRate !== "" ? Number(savedRate) : 30);
     }
   }, [tenant]);
 
-  // Lưu Vốn và Chỉ tiêu tự động khi thay đổi
-  useEffect(() => {
-    if (tenant) {
-      localStorage.setItem(`saas_restaurant_capital_${tenant}`, initialCapital);
-      localStorage.setItem(`saas_restaurant_target_profit_rate_${tenant}`, targetProfitRate);
+  // Hàm lưu chỉ số tài chính lên DB & LocalStorage
+  const handleSaveFinancialConfig = async (capital, rate) => {
+    localStorage.setItem(`saas_restaurant_capital_${tenant}`, capital);
+    localStorage.setItem(`saas_restaurant_target_profit_rate_${tenant}`, rate);
+    if (restaurantId) {
+      await saveFinancialConfig(capital, rate);
     }
-  }, [initialCapital, targetProfitRate, tenant]);
+  };
 
-  // Hàm Lưu thủ công cấu hình tài khoản ngân hàng nhận tiền
-  const handleSaveBankConfig = () => {
-    if (tenant) {
-      localStorage.setItem(`saas_bank_id_${tenant}`, bankId);
-      localStorage.setItem(`saas_custom_bank_${tenant}`, customBank);
-      localStorage.setItem(`saas_bank_account_no_${tenant}`, bankAccountNo);
-      localStorage.setItem(`saas_bank_account_name_${tenant}`, bankAccountName);
-      
-      let bankFullName = '';
-      if (bankId === 'custom') {
-        if (!customBank.trim()) {
-          alert('⚠️ Vui lòng điền tên ngân hàng tự thêm!');
-          return;
-        }
-        bankFullName = customBank.trim();
-      } else {
-        const bankOptions = {
-          'tpb': 'TPBank',
-          'vcb': 'Vietcombank',
-          'mb': 'MBBank',
-          'tcb': 'Techcombank',
-          'acb': 'ACB',
-          'bidv': 'BIDV',
-          'vietinbank': 'Vietinbank',
-          'vpb': 'VPBank'
-        };
-        bankFullName = bankOptions[bankId] || '';
-      }
-      localStorage.setItem(`saas_bank_full_name_${tenant}`, bankFullName);
-      alert('🎉 Đã lưu cấu hình tài khoản ngân hàng thành công!');
+  const handleCapitalBlur = () => {
+    handleSaveFinancialConfig(initialCapital, targetProfitRate);
+  };
+
+  const handleRateBlur = () => {
+    handleSaveFinancialConfig(initialCapital, targetProfitRate);
+  };
+
+  // Hàm Lưu thủ công cấu hình tài khoản ngân hàng nhận tiền lên Database
+  const handleSaveBankConfig = async () => {
+    if (bankId === 'custom' && !customBank.trim()) {
+      alert('⚠️ Vui lòng điền tên ngân hàng tự thêm!');
+      return;
+    }
+    const result = await saveBankConfig(bankId, customBank, bankAccountNo, bankAccountName);
+    if (result.success) {
+      alert('🎉 Đã lưu cấu hình tài khoản ngân hàng lên Database thành công!');
+    } else {
+      alert(`⚠️ Không thể lưu cấu hình: ${result.message}`);
     }
   };
 
@@ -373,6 +361,7 @@ export const Dashboard = () => {
                   const val = e.target.value;
                   setInitialCapital(val === "" ? "" : Math.max(0, Number(val)));
                 }}
+                onBlur={handleCapitalBlur}
                 placeholder="Nhập số vốn..."
                 className={styles.capitalInput}
               />
@@ -388,6 +377,7 @@ export const Dashboard = () => {
                   const val = e.target.value;
                   setTargetProfitRate(val === "" ? "" : Math.max(0, Number(val)));
                 }}
+                onBlur={handleRateBlur}
                 placeholder="Ví dụ: 30%"
                 className={styles.capitalInput}
               />

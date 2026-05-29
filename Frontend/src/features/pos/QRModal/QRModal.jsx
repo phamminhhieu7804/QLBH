@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { CheckCircle2, ShieldCheck, Loader2, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '../../../components/Button/Button';
+import { TenantContext } from '../../../context/TenantContext';
 import styles from './QRModal.module.css';
 
 // Modal hiển thị QR Code thanh toán VietQR động
@@ -19,30 +20,22 @@ export const QRModal = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const tenant = localStorage.getItem('saas_current_tenant') || '';
-  const bankFullName = localStorage.getItem(`saas_bank_full_name_${tenant}`) || '';
-  const bankAccountNo = localStorage.getItem(`saas_bank_account_no_${tenant}`) || '';
-  const bankAccountName = localStorage.getItem(`saas_bank_account_name_${tenant}`) || '';
+  const { tenant, bankId, bankFullName, bankAccountNo, bankAccountName } = useContext(TenantContext);
 
   // Sinh liên kết ảnh VietQR tự động dựa trên số tiền và mã đơn hàng
   const generateQRCode = (amt, ordId) => {
-    const tenant = localStorage.getItem('saas_current_tenant') || '';
-    const bankId = localStorage.getItem(`saas_bank_id_${tenant}`);
-    const accountNo = localStorage.getItem(`saas_bank_account_no_${tenant}`);
-    const rawAccountName = localStorage.getItem(`saas_bank_account_name_${tenant}`) || 'CUA HANG';
-
-    if (!bankId || !accountNo) {
+    if (!bankId || !bankAccountNo) {
       return '';
     }
 
     const template = 'compact'; // compact | qr_only | print
-    const accountName = encodeURIComponent(rawAccountName.toUpperCase());
+    const accountName = encodeURIComponent((bankAccountName || 'CUA HANG').toUpperCase());
     const addInfo = encodeURIComponent(`THANH TOAN DON ${ordId}`);
     
     // Chuẩn hóa Bank ID (ví dụ: tp bank -> tpb)
     const normalizedBank = bankId.toLowerCase().replace(/\s+/g, '');
     
-    return `https://img.vietqr.io/image/${normalizedBank}-${accountNo}-${template}.png?amount=${amt}&addInfo=${addInfo}&accountName=${accountName}`;
+    return `https://img.vietqr.io/image/${normalizedBank}-${bankAccountNo}-${template}.png?amount=${amt}&addInfo=${addInfo}&accountName=${accountName}`;
   };
 
   const handlePrintBill = () => {

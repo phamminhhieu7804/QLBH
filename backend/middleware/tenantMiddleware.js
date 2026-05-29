@@ -1,7 +1,8 @@
-import { getTenantConnection } from '../config/db.js';
+import { getTenantConnection, RestaurantSchema, TableSchema, ProductSchema } from '../config/db.js';
+import { seedTenantData } from '../config/seeder.js';
 
 // Middleware phân tuyến cơ sở dữ liệu động dành cho từng Quán (Multi-Tenant Routing)
-export const tenantMiddleware = (req, res, next) => {
+export const tenantMiddleware = async (req, res, next) => {
   try {
     // 1. Trích xuất mã Quán (Tenant Code) từ Headers, Query parameters hoặc Body
     const tenantHeader = req.headers['x-tenant'];
@@ -21,9 +22,44 @@ export const tenantMiddleware = (req, res, next) => {
       });
     }
 
-    // 3. Đính kèm Connection động và mã Quán vào đối tượng Request
+    // 3. Khởi tạo Models động trên kết nối riêng của Tenant này
+    const Restaurant = dbConnection.model('Restaurant', RestaurantSchema);
+    dbConnection.model('Table', TableSchema);
+    dbConnection.model('Product', ProductSchema);
+
+    // 4. Tìm hoặc tự động tạo cấu hình Quán ăn (Restaurant) trong MongoDB
+    let restaurant = await Restaurant.findOne();
+    if (!restaurant) {
+      // Tự sinh tên đẹp cho Quán từ slug
+      let readableName = tenantCode
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      
+      if (tenantCode === 'pho-gia-truyen') readableName = 'Phở Gia Truyền';
+      if (tenantCode === 'tra-sua-chill') readableName = 'Trà Sữa Chill';
+
+      restaurant = new Restaurant({
+        name: readableName,
+        ownerName: 'Chủ Quán',
+        phone: '',
+        address: '',
+        config: {
+          initialInvestment: null,
+          targetProfitMargin: null
+        }
+      });
+      await restaurant.save();
+    }
+
+    // 5. Tự động seed bàn ăn và thực đơn mẫu nếu quán chưa có dữ liệu
+    await seedTenantData(dbConnection, tenantCode, restaurant._id);
+
+    // 6. Đính kèm Connection động, mã Quán và thông tin Restaurant vào đối tượng Request
     req.tenantDb = dbConnection;
     req.tenantCode = tenantCode;
+    req.restaurantId = restaurant._id.toString();
+    req.restaurant = restaurant;
 
     next(); // Cho phép request đi tiếp tới Controller
   } catch (error) {

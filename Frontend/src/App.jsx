@@ -31,7 +31,7 @@ import styles from './App.module.css';
 
 // Component con đăng ký TenantContext để định tuyến động các màn hình chính
 const AppContent = () => {
-  const { isLoggedIn, tenantName, user, role, logout } = useContext(TenantContext);
+  const { isLoggedIn, tenantName, user, role, logout, isBackendConnecting, backendError } = useContext(TenantContext);
   const { activeTableName } = useContext(CartContext);
   
   // Các view khả dụng sau đăng nhập: 'hub' | 'admin' | 'pos'
@@ -81,6 +81,50 @@ const AppContent = () => {
   // 1. Nếu chưa đăng nhập -> Hiển thị trang đăng nhập đa quán
   if (!isLoggedIn) {
     return <Login />;
+  }
+
+  // 1b. Máy chủ ngủ đông hoặc chưa kết nối xong -> Hiển thị màn hình kính mờ kết nối xoay tròn cực kỳ cao cấp
+  if (isLoggedIn && isBackendConnecting) {
+    return (
+      <div className={styles.dbConnectionOverlay}>
+        <div className={styles.dbConnectionCard}>
+          <div className={styles.spinnerContainer}>
+            <div className={styles.glowSpinner}></div>
+          </div>
+          <h4 className={styles.dbTitle}>Đang kết nối Cơ sở dữ liệu</h4>
+          <p className={styles.dbDesc}>
+            Đang kích hoạt và tải dữ liệu riêng biệt của quán <strong>{tenantName}</strong> từ MongoDB Atlas... Vui lòng đợi trong giây lát.
+          </p>
+          <div className={styles.dbStatus}>
+            <div className={styles.pulseDot}></div>
+            <span>Liên kết Multi-Database</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 1c. Lỗi kết nối -> Hiển thị màn hình lỗi kính mờ cực kỳ đẹp mắt
+  if (isLoggedIn && backendError) {
+    return (
+      <div className={styles.dbConnectionOverlay}>
+        <div className={styles.dbErrorCard}>
+          <div className={styles.errorIconWrapper}>
+            <Database size={32} />
+          </div>
+          <h4 className={styles.dbTitle} style={{ color: '#ef4444' }}>Kết nối Thất bại</h4>
+          <p className={styles.dbDesc} style={{ marginBottom: '20px' }}>
+            {backendError}
+          </p>
+          <button 
+            className={styles.btnReconnect} 
+            onClick={() => window.location.reload()}
+          >
+            Thử kết nối lại
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // 2. Nếu đã đăng nhập và đang ở cổng SaaS Hub -> Hiển thị Hub chọn phân hệ

@@ -35,19 +35,8 @@ const io = new Server(server, {
 app.set('io', io);
 
 // 4. Áp dụng các Middleware tiêu chuẩn
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://qlbh-ten.vercel.app' // Thêm chính xác tên miền mới của bạn vào đây
-];
-
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Chặn bởi CORS bảo mật'));
-    }
-  },
+  origin: true, // Tự động phản hồi khớp với origin gửi request (xử lý triệt để CORS Vercel)
   credentials: true
 }));
 app.use(express.json());
@@ -55,6 +44,14 @@ app.use(express.json());
 // 5. ÁP DỤNG TENANT ROUTER MIDDLEWARE CHO TẤT CẢ ĐƯỜNG DẪN /api
 // Mỗi request tới /api sẽ tự động liên kết tới 1 database độc lập của Quán tương ứng
 app.use('/api', tenantMiddleware);
+
+// API đặc biệt lấy thông tin Quán ăn hiện tại cho Tenant đang đăng nhập
+app.get('/api/restaurant', (req, res) => {
+  return res.status(200).json({
+    success: true,
+    data: req.restaurant
+  });
+});
 
 // 6. Gắn kết các đầu tuyến API (Mounting Routes)
 app.use('/api/restaurant', restaurantRoutes);
@@ -288,10 +285,10 @@ app.get('/', (req, res) => {
         <div class="pulse-circle">
           <div class="pulse-inner"></div>
         </div>
-        <h1>quản lý bán hàng by Sinh Viên Bonnie SaaS API</h1>
+        <h1>Quản lý bán hàng by Bonnie </h1>
         <div class="status-badge">
           <div class="status-dot"></div>
-          <span>MÁY CHỦ MULTI-DATABASE HOẠT ĐỘNG ONLINE</span>
+          <span>MÁY CHỦ DATABASE HOẠT ĐỘNG ONLINE</span>
         </div>
         <p class="desc">
           Lõi máy chủ SaaS hoạt động theo mô hình Phân tách Vật lý Cơ sở dữ liệu động. 

@@ -395,3 +395,125 @@ export const getDashboardReport = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Lỗi trích xuất báo cáo doanh số', error: error.message });
   }
 };
+
+// [PUT] /api/orders/update-item-qty
+// Cập nhật số lượng món ăn trong đơn hàng
+export const updateOrderItemQuantity = async (req, res) => {
+  try {
+    const { orderItemId, quantity } = req.body;
+
+    if (!orderItemId || quantity === undefined) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp orderItemId và số lượng mới' });
+    }
+
+    const Order = req.tenantDb.model('Order', OrderSchema);
+    const order = await Order.findOne({ 'items.orderItemId': orderItemId });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng chứa món này' });
+    }
+
+    const item = order.items.find(i => i.orderItemId === orderItemId);
+    if (item) {
+      const parsedQty = Math.max(0, Number(quantity));
+      if (parsedQty === 0) {
+        order.items = order.items.filter(i => i.orderItemId !== orderItemId);
+      } else {
+        item.quantity = parsedQty;
+      }
+    }
+
+    recalculateOrderTotals(order);
+    await order.save();
+
+    // Phát sự kiện đồng bộ socket
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('order-updated', {
+        tableId: order.tableId,
+        orderId: order._id,
+        items: order.items,
+        tenant: req.tenantCode
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cập nhật số lượng món ăn thành công',
+      data: order
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi cập nhật số lượng món ăn', error: error.message });
+  }
+};
+
+// [POST] /api/orders/remove-item
+// Xóa món ăn khỏi đơn hàng
+export const removeOrderItem = async (req, res) => {
+  try {
+    const { orderItemId } = req.body;
+
+    if (!orderItemId) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp orderItemId' });
+    }
+
+    const Order = req.tenantDb.model('Order', OrderSchema);
+    const order = await Order.findOne({ 'items.orderItemId': orderItemId });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng chứa món này' });
+    }
+
+    order.items = order.items.filter(i => i.orderItemId !== orderItemId);
+
+    recalculateOrderTotals(order);
+    await order.save();
+
+    // Phát sự kiện đồng bộ socket
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('order-updated', {
+        tableId: order.tableId,
+        orderId: order._id,
+        items: order.items,
+        tenant: req.tenantCode
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Xóa món khỏi đơn hàng thành công',
+      data: order
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi xóa món khỏi đơn hàng', error: error.message });
+  }
+};
+
+// [GET] /api/orders/history
+// Lấy danh sách các hóa đơn đã hoàn tất thanh toán (paid) phục vụ Dashboard thống kê doanh thu
+export const getPaidOrdersHistory = async (req, res) => {
+  try {
+    const { restaurantId } = req.query;
+
+    if (!restaurantId) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã restaurantId' });
+    }
+
+    const Order = req.tenantDb.model('Order', OrderSchema);
+    req.tenantDb.model('Product', ProductSchema); // Đăng ký Product model để populate hoạt động
+
+    // Lấy 50 hóa đơn đã thanh toán gần đây nhất, sắp xếp mới nhất lên đầu
+    const history = await Order.find({ restaurantId, paymentStatus: 'paid' })
+      .populate('items.productId')
+      .sort({ updatedAt: -1 })
+      .limit(50);
+
+    return res.status(200).json({
+      success: true,
+      data: history
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi trích xuất lịch sử đơn hàng', error: error.message });
+  }
+};
