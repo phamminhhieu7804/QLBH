@@ -116,3 +116,52 @@ export const updateFinancialConfig = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Lỗi cấu hình hệ thống', error: error.message });
   }
 };
+
+// [GET] /api/restaurant
+// Lấy thông tin cấu hình Quán ăn. Nếu chưa tồn tại, tự chèn dữ liệu mặc định để tự vá dữ liệu cho quán mới.
+export const getRestaurant = async (req, res) => {
+  try {
+    const { tenant } = req.query;
+    const tenantCode = tenant || req.headers['x-tenant'] || req.tenantCode || 'default';
+
+    const Restaurant = req.tenantDb.models.Restaurant || req.tenantDb.model('Restaurant', RestaurantSchema);
+
+    let restaurant = await Restaurant.findOne();
+
+    // Tự động tạo cấu hình mặc định mẫu nếu chưa có dữ liệu cấu hình trong DB riêng biệt của Tenant mới
+    if (!restaurant) {
+      let readableName = tenantCode
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+      if (tenantCode === 'pho-gia-truyen') readableName = 'Phở Gia Truyền';
+      if (tenantCode === 'tra-sua-chill') readableName = 'Trà Sữa Chill';
+
+      restaurant = new Restaurant({
+        name: readableName,
+        ownerName: 'Chủ Quán',
+        phone: '',
+        address: '',
+        config: {
+          initialInvestment: null,
+          targetProfitMargin: null
+        }
+      });
+      await restaurant.save();
+
+      return res.status(201).json({
+        success: true,
+        message: 'Khởi tạo cấu hình mặc định quán ăn thành công!',
+        data: restaurant
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: restaurant
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi tải hoặc khởi tạo cấu hình quán ăn', error: error.message });
+  }
+};

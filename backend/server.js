@@ -13,8 +13,9 @@ import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 
-// Import Controller phục vụ tuyến đường báo cáo Dashboard
+// Import Controller phục vụ tuyến đường báo cáo Dashboard và thông tin Quán
 import { getDashboardReport } from './controllers/orderController.js';
+import { getRestaurant } from './controllers/restaurantController.js';
 
 // 1. Khởi động Connection Pool Manager đa quán
 connectDB();
@@ -45,13 +46,8 @@ app.use(express.json());
 // Mỗi request tới /api sẽ tự động liên kết tới 1 database độc lập của Quán tương ứng
 app.use('/api', tenantMiddleware);
 
-// API đặc biệt lấy thông tin Quán ăn hiện tại cho Tenant đang đăng nhập
-app.get('/api/restaurant', (req, res) => {
-  return res.status(200).json({
-    success: true,
-    data: req.restaurant
-  });
-});
+// API lấy cấu hình Quán ăn (tự chèn dữ liệu mẫu nếu đây là tenant mới chưa có cấu hình)
+app.get('/api/restaurant', getRestaurant);
 
 // 6. Gắn kết các đầu tuyến API (Mounting Routes)
 app.use('/api/restaurant', restaurantRoutes);
