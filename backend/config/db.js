@@ -8,8 +8,15 @@ let baseConnection = null;
 export const getTenantConnection = (tenantCode) => {
   if (!tenantCode) return null;
   
-  // Chuẩn hóa mã Quán thành tên Database viết thường không khoảng trắng
-  const dbName = `order-quản lý bán hàng by Sinh Viên Bonnie-${tenantCode.toLowerCase().trim()}`;
+  // Chuẩn hóa mã Quán thành tên Database viết thường, không khoảng trắng, không dấu tiếng Việt (an toàn tuyệt đối cho MongoDB Atlas)
+  const cleanTenant = tenantCode.toLowerCase().trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/([^a-z0-9\s-]|_)+/g, '')
+    .replace(/\s+/g, '-');
+
+  const dbName = `order-quan-ly-ban-hang-by-sinh-vien-bonnie-${cleanTenant}`;
   
   // Nếu đã có sẵn kết nối hoạt động trong Pool Cache, trả về ngay
   if (connections[dbName]) {
