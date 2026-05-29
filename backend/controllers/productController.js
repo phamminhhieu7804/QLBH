@@ -10,8 +10,8 @@ export const getProducts = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã restaurantId' });
     }
 
-    // Khởi tạo model động
-    const Product = req.tenantDb.model('Product', ProductSchema);
+    // Khởi tạo hoặc tái sử dụng model động
+    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
     const products = await Product.find({ restaurantId }).sort({ category: 1, name: 1 });
 
     return res.status(200).json({
@@ -33,8 +33,8 @@ export const createProduct = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ các thông tin bắt buộc' });
     }
 
-    // Khởi tạo model động
-    const Product = req.tenantDb.model('Product', ProductSchema);
+    // Khởi tạo hoặc tái sử dụng model động
+    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
 
     const product = new Product({
       name,
@@ -65,8 +65,8 @@ export const updateProduct = async (req, res) => {
     const { id } = req.params;
     const { name, image, price, costPrice, category, isAvailable } = req.body;
 
-    // Khởi tạo model động
-    const Product = req.tenantDb.model('Product', ProductSchema);
+    // Khởi tạo hoặc tái sử dụng model động
+    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
 
     const product = await Product.findById(id);
     if (!product) {
@@ -98,8 +98,8 @@ export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Khởi tạo model động
-    const Product = req.tenantDb.model('Product', ProductSchema);
+    // Khởi tạo hoặc tái sử dụng model động
+    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
 
     const product = await Product.findByIdAndDelete(id);
     if (!product) {

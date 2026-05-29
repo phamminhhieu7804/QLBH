@@ -22,10 +22,10 @@ export const tenantMiddleware = async (req, res, next) => {
       });
     }
 
-    // 3. Khởi tạo Models động trên kết nối riêng của Tenant này
-    const Restaurant = dbConnection.model('Restaurant', RestaurantSchema);
-    dbConnection.model('Table', TableSchema);
-    dbConnection.model('Product', ProductSchema);
+    // 3. Khởi tạo hoặc tái sử dụng Models động trên kết nối riêng của Tenant này để tránh OverwriteModelError
+    const Restaurant = dbConnection.models.Restaurant || dbConnection.model('Restaurant', RestaurantSchema);
+    const Table = dbConnection.models.Table || dbConnection.model('Table', TableSchema);
+    const Product = dbConnection.models.Product || dbConnection.model('Product', ProductSchema);
 
     // 4. Tìm hoặc tự động tạo cấu hình Quán ăn (Restaurant) trong MongoDB
     let restaurant = await Restaurant.findOne();

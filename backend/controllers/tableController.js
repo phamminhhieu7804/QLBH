@@ -10,8 +10,8 @@ export const getAllTables = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã restaurantId' });
     }
 
-    // Khởi tạo model động
-    const Table = req.tenantDb.model('Table', TableSchema);
+    // Khởi tạo hoặc tái sử dụng model động
+    const Table = req.tenantDb.models.Table || req.tenantDb.model('Table', TableSchema);
     const tables = await Table.find({ restaurantId }).sort({ tableName: 1 });
 
     return res.status(200).json({
@@ -33,9 +33,9 @@ export const createTable = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng điền tên bàn và mã restaurantId' });
     }
 
-    // Khởi tạo model động
-    const Table = req.tenantDb.model('Table', TableSchema);
-    const Restaurant = req.tenantDb.model('Restaurant', RestaurantSchema);
+    // Khởi tạo hoặc tái sử dụng model động
+    const Table = req.tenantDb.models.Table || req.tenantDb.model('Table', TableSchema);
+    const Restaurant = req.tenantDb.models.Restaurant || req.tenantDb.model('Restaurant', RestaurantSchema);
 
     const restaurant = await Restaurant.findById(restaurantId);
     if (!restaurant) {
@@ -84,7 +84,7 @@ export const createTable = async (req, res) => {
 export const deleteTable = async (req, res) => {
   try {
     const { id } = req.params;
-    const Table = req.tenantDb.model('Table', TableSchema);
+    const Table = req.tenantDb.models.Table || req.tenantDb.model('Table', TableSchema);
 
     const table = await Table.findByIdAndDelete(id);
     if (!table) {

@@ -121,8 +121,8 @@ export const MILKTEA_MENU = [
 // Hàm tự động seed dữ liệu cho cơ sở dữ liệu của một quán
 export const seedTenantData = async (dbConnection, tenantCode, restaurantId) => {
   try {
-    const Table = dbConnection.model('Table');
-    const Product = dbConnection.model('Product');
+    const Table = dbConnection.models.Table || dbConnection.model('Table');
+    const Product = dbConnection.models.Product || dbConnection.model('Product');
 
     // 1. Seed 12 bàn mặc định
     const tableCount = await Table.countDocuments();

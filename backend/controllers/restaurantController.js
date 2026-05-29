@@ -10,10 +10,10 @@ export const getRestaurantInfoByTableId = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp tham số tableId' });
     }
 
-    // Khởi tạo model động trên kết nối riêng biệt của request này
-    const Table = req.tenantDb.model('Table', TableSchema);
-    const Restaurant = req.tenantDb.model('Restaurant', RestaurantSchema);
-    const Product = req.tenantDb.model('Product', ProductSchema);
+    // Khởi tạo hoặc tái sử dụng model động trên kết nối riêng biệt của request này
+    const Table = req.tenantDb.models.Table || req.tenantDb.model('Table', TableSchema);
+    const Restaurant = req.tenantDb.models.Restaurant || req.tenantDb.model('Restaurant', RestaurantSchema);
+    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
 
     // 1. Tìm thông tin Bàn
     const table = await Table.findById(tableId);
@@ -73,8 +73,8 @@ export const updateFinancialConfig = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã restaurantId' });
     }
 
-    // Khởi tạo model động
-    const Restaurant = req.tenantDb.model('Restaurant', RestaurantSchema);
+    // Khởi tạo hoặc tái sử dụng model động
+    const Restaurant = req.tenantDb.models.Restaurant || req.tenantDb.model('Restaurant', RestaurantSchema);
 
     // Kiểm tra xem Quán có tồn tại hay không
     const restaurant = await Restaurant.findById(restaurantId);
