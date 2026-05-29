@@ -1,0 +1,910 @@
+.cartContainer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.cartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-sidebar);
+}
+
+.cartTitleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.titleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cartTitleWrapper h4 {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.diningModeBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  width: fit-content;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.modeDineIn {
+  background-color: rgba(16, 185, 129, 0.08);
+  color: var(--success-color);
+}
+
+.modeTakeAway {
+  background-color: rgba(245, 158, 11, 0.08);
+  color: var(--warning-color);
+}
+
+.itemBadge {
+  font-size: 11px;
+  font-weight: 700;
+  background-color: var(--primary-glow);
+  color: var(--primary-color);
+  padding: 2px 8px;
+  border-radius: var(--radius-round);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clearBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color var(--transition-fast);
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  background-color: var(--bg-app);
+  border: none;
+  cursor: pointer;
+}
+
+.clearBtn:hover {
+  color: var(--danger-color);
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+/* Nút cấu hình bánh răng */
+.settingsContainer {
+  position: relative;
+}
+
+.settingsBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-xs);
+  background-color: var(--bg-app);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.settingsBtn:hover,
+.settingsBtnActive {
+  color: var(--primary-color);
+  background-color: var(--primary-glow);
+  border-color: var(--primary-color);
+}
+
+.settingsBtnActive svg {
+  transform: rotate(45deg);
+  transition: transform 0.3s ease;
+}
+
+/* Popover chứa các cài đặt bàn ăn */
+.settingsPopover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 310px;
+  background-color: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-premium);
+  padding: 16px;
+  margin-top: 8px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: popoverFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popoverFade {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.popoverHeader h5 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.popoverSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Metadata Grid cho Thông tin Đơn hàng */
+.metadataGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background-color: var(--bg-input);
+  padding: 10px 12px;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.metadataItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.metaIcon {
+  color: var(--primary-color);
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.metaLabel {
+  font-weight: 600;
+  color: var(--text-secondary);
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.metaValue {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.modeOptions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.modeBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.modeBtn:hover {
+  background-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.activeModeBtn {
+  background-color: var(--primary-glow) !important;
+  border-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
+}
+
+.divider {
+  border: 0;
+  border-top: 1px solid var(--border-color);
+  margin: 4px 0;
+}
+
+/* Chuyển bàn / Gộp bàn */
+.transferSelectRow {
+  width: 100%;
+}
+
+.transferSelect {
+  width: 100%;
+  height: 36px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-input);
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.transferSelect:focus {
+  border-color: var(--primary-color);
+  background-color: #ffffff;
+}
+
+.actionButtonsRow {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.transferBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  border-radius: var(--radius-xs);
+  background-color: var(--primary-color);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border: none;
+}
+
+.transferBtn:hover {
+  background-color: var(--primary-hover);
+}
+
+.mergeBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  border-radius: var(--radius-xs);
+  background-color: var(--secondary-color);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border: none;
+}
+
+.mergeBtn:hover {
+  background-color: var(--secondary-hover);
+}
+
+.errorAlert {
+  font-size: 11px;
+  color: var(--danger-color);
+  background-color: rgba(239, 68, 68, 0.05);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-weight: 600;
+  margin-top: 4px;
+  border-left: 3px solid var(--danger-color);
+}
+
+.successAlert {
+  font-size: 11px;
+  color: var(--success-color);
+  background-color: rgba(16, 185, 129, 0.05);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-weight: 600;
+  margin-top: 4px;
+  border-left: 3px solid var(--success-color);
+}
+
+/* Items List */
+.itemsList {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cartItem {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-app);
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+  gap: 10px;
+}
+
+.cartItem:hover {
+  border-color: var(--border-color);
+  background-color: var(--bg-sidebar);
+}
+
+.itemImg {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.itemDetails {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.itemName {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.itemPrice {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-family: 'Outfit', var(--font-sans);
+}
+
+/* Qty Controls */
+.qtyControl {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-input);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.qtyBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: background-color var(--transition-fast);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.qtyBtn:hover:not(:disabled) {
+  background-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.qtyBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.qtyInput {
+  font-size: 13px;
+  font-weight: 700;
+  width: 28px;
+  text-align: center;
+  color: var(--text-primary);
+  font-family: 'Outfit', var(--font-sans);
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+
+.qtyInput::-webkit-outer-spin-button,
+.qtyInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.lineTotal {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: right;
+  width: 80px;
+  font-family: 'Outfit', var(--font-sans);
+  flex-shrink: 0;
+}
+
+.deleteBtn {
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--danger-color);
+}
+
+.deleteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.emptyCart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  color: var(--text-muted);
+  padding: 20px;
+}
+
+.emptyCartIconWrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: var(--bg-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.emptyIcon {
+  color: var(--text-muted);
+}
+
+.emptyCart span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.emptyCart p {
+  font-size: 11px;
+}
+
+/* Summary Section */
+.summarySection {
+  background-color: var(--bg-sidebar);
+  border-top: 1px solid var(--border-color);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.rowVal {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Adjustments like tax and discount */
+.adjustmentRow {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  gap: 10px;
+}
+
+.adjustmentLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  flex-shrink: 0;
+  width: 100px;
+}
+
+.adjIcon {
+  color: var(--text-muted);
+}
+
+.adjInputWrapper {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+}
+
+.adjInput {
+  width: 48px;
+  height: 28px;
+  background-color: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast);
+  outline: none;
+}
+
+.adjInput:focus {
+  border-color: var(--primary-color);
+  background-color: #ffffff;
+}
+
+.adjAmountValue {
+  text-align: right;
+  color: var(--text-secondary);
+  font-weight: 600;
+  width: 75px;
+  flex-shrink: 0;
+}
+
+/* Total payment */
+.totalPaymentRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px dashed var(--border-color);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+.totalLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.totalVal {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--danger-color);
+}
+
+.numeric {
+  font-family: 'Outfit', var(--font-sans);
+}
+
+/* Checkout Button */
+.checkoutBtn {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25) !important;
+  height: 48px;
+}
+
+.checkoutBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--secondary-hover) 100%) !important;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35) !important;
+}
+
+@media (max-width: 768px) {
+  .cartContainer {
+    height: auto;
+    border-radius: 0;
+    border: none;
+  }
+  
+  .itemsList {
+    max-height: 350px;
+  }
+}
+
+/* Nút đánh dấu đã lên món (Tick Served Items) */
+.serveTickBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-round);
+  color: var(--text-muted);
+  background-color: transparent;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  border: none;
+  cursor: pointer;
+}
+
+.serveTickBtn:hover {
+  background-color: rgba(16, 185, 129, 0.08);
+  color: var(--success-color);
+}
+
+.activeServeTick {
+  color: var(--success-color) !important;
+}
+
+/* Dòng món ăn mờ nhạt dần khi đã lên món */
+.servedItem {
+  opacity: 0.55 !important;
+  background-color: rgba(226, 232, 240, 0.3) !important;
+  border-color: rgba(226, 232, 240, 0.5) !important;
+  transition: all var(--transition-smooth);
+}
+
+.servedItem .itemImg {
+  filter: grayscale(80%);
+}
+
+.servedItem .itemName {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.itemNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.servedBadge {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--success-color);
+  background-color: rgba(16, 185, 129, 0.1);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.cancelTableBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  border-radius: var(--radius-xs);
+  background-color: rgba(239, 68, 68, 0.08);
+  color: var(--danger-color);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cancelTableBtn:hover {
+  background-color: var(--danger-color);
+  color: #ffffff;
+  border-color: var(--danger-color);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+/* --- CHẾ ĐỘ QUÉT QR TỰ GỌI MÓN (GUEST QR ORDER) --- */
+.qrOrderSubmitBtn {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--success-color) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25) !important;
+  height: 48px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+}
+
+.qrOrderSubmitBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-hover) 0%, #10b981 100%) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35) !important;
+}
+
+.qrOrderConfirmedCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px;
+  background-color: rgba(16, 185, 129, 0.07);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  border-radius: var(--radius-md);
+  text-align: center;
+  animation: slideUpCart 0.3s ease;
+}
+
+@keyframes slideUpCart {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Badge "Bàn đang hoạt động" */
+.confirmedActiveBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--success-color);
+  background-color: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.activeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--success-color);
+  box-shadow: 0 0 6px var(--success-color);
+  animation: pulseActive 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseActive {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+.successIcon {
+  color: var(--success-color);
+  flex-shrink: 0;
+}
+
+.confirmedTextWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.confirmedTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--success-color);
+}
+
+.confirmedDesc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Nút gọi thêm món */
+.orderMoreBtn {
+  width: 100%;
+  height: 36px;
+  border-radius: var(--radius-xs);
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--success-color);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 4px;
+}
+
+.orderMoreBtn:hover {
+  background-color: var(--success-color);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.submittedItem {
+  background-color: rgba(6, 182, 212, 0.02) !important;
+  border-left: 3px solid var(--primary-color, #06b6d4) !important;
+}
+
+.disabledServeTick {
+  color: var(--primary-color, #06b6d4) !important;
+  cursor: not-allowed !important;
+  opacity: 0.8;
+}
+
+.submittedBadge {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--primary-color, #06b6d4);
+  background-color: rgba(6, 182, 212, 0.1);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* Layout dòng 2 nút Thanh toán + In */
+.checkoutActionsRow {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  align-items: center;
+}
+
+.checkoutBtnWithPrint {
+  flex: 1 !important;
+}
+
+.printBtnInline {
+  min-width: 80px !important;
+  border-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
+  background-color: transparent !important;
+  transition: all var(--transition-fast);
+}
+
+.printBtnInline:hover {
+  background-color: var(--primary-glow) !important;
+  box-shadow: 0 4px 12px var(--primary-glow) !important;
+}
+
+
+

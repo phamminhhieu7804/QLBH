@@ -1,0 +1,408 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  z-index: 100;
+}
+
+.container {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  gap: 20px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  border-right: 1px solid var(--border-color);
+  padding: 6px 16px 6px 6px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-radius: var(--radius-sm);
+}
+
+.titleWrapper:hover,
+.titleActive {
+  color: var(--primary-color) !important;
+  background-color: var(--primary-glow);
+}
+
+.titleWrapper h5 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.titleIcon {
+  color: var(--primary-color);
+}
+
+.chevronBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+  background-color: rgba(59, 130, 246, 0.08);
+  color: var(--primary-color);
+  margin-left: 4px;
+}
+
+/* Horizontal tables list */
+.tablesList {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  flex-grow: 1;
+  padding: 4px 0;
+  scroll-behavior: smooth;
+}
+
+/* Ẩn thanh cuộn để giữ thẩm mỹ kính mờ sạch sẽ */
+.tablesList::-webkit-scrollbar {
+  display: none;
+}
+
+.tableCard {
+  background-color: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+  flex-shrink: 0;
+}
+
+.tableCard:hover {
+  background-color: var(--border-color);
+  transform: translateY(-2px);
+}
+
+.tableCard:active {
+  transform: scale(0.97);
+}
+
+/* Bàn đang được chọn */
+.selectedCard {
+  background-color: var(--primary-glow) !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Bàn đang có khách */
+.occupiedCard {
+  background-color: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.15);
+}
+
+.selectedCard.occupiedCard {
+  background-color: var(--primary-glow) !important;
+  border-color: var(--primary-color) !important;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tableName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.userIcon {
+  color: var(--warning-color);
+}
+
+.cardStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.greenDot {
+  background-color: var(--success-color);
+  box-shadow: 0 0 6px var(--success-color);
+}
+
+.orangeDot {
+  background-color: var(--warning-color);
+  box-shadow: 0 0 6px var(--warning-color);
+}
+
+.statusText {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.selectedCard .tableName {
+  color: var(--primary-color);
+}
+
+/* CSS Cho Sơ đồ lưới chi tiết SỔ XUỐNG (Dropdown Panel) */
+.dropdownPanel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-premium);
+  padding: 20px;
+  margin-top: 8px;
+  z-index: 1000;
+  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalGridHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.modalSubtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.tablesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px;
+}
+
+.gridTableCard {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform var(--transition-bounce), box-shadow var(--transition-smooth), border-color var(--transition-fast);
+}
+
+.gridTableCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-color);
+}
+
+.gridTableCard:active {
+  transform: scale(0.98);
+}
+
+.occupiedGridCard {
+  background-color: rgba(245, 158, 11, 0.02);
+  border-color: rgba(245, 158, 11, 0.12);
+}
+
+.selectedGridCard {
+  background-color: var(--primary-glow) !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: var(--shadow-md);
+}
+
+.cardBorderTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.borderGreen {
+  background-color: var(--success-color);
+}
+
+.borderOrange {
+  background-color: var(--warning-color);
+}
+
+.cardMainInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tableIconWrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconBgGreen {
+  background-color: rgba(16, 185, 129, 0.08);
+  color: var(--success-color);
+}
+
+.iconBgOrange {
+  background-color: rgba(245, 158, 11, 0.08);
+  color: var(--warning-color);
+}
+
+.tableText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gridTableName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.selectedGridCard .gridTableName {
+  color: var(--primary-color);
+}
+
+.tableStatusText {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+}
+
+.disabledDeleteWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  color: var(--warning-color);
+  background-color: rgba(245, 158, 11, 0.08);
+  font-weight: 700;
+}
+
+.warningIcon {
+  flex-shrink: 0;
+}
+
+.warningTooltip {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.emptyState {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .titleWrapper {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    padding-right: 0;
+    padding-bottom: 8px;
+  }
+  
+  .tablesList {
+    padding-bottom: 8px;
+    overflow-x: auto;
+  }
+  
+  .tablesList::-webkit-scrollbar {
+    display: block;
+    height: 4px;
+  }
+
+  .modalGridHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .legend {
+    align-self: flex-start;
+  }
+}
