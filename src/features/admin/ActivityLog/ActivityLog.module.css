@@ -1,0 +1,248 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.titleArea h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.headerActions {
+  display: flex;
+  gap: 12px;
+}
+
+.refreshBtn, .clearBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.refreshBtn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.clearBtn {
+  background-color: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: var(--danger-color);
+}
+
+.clearBtn:hover {
+  background-color: var(--danger-color);
+  color: white;
+  border-color: var(--danger-color);
+}
+
+/* Filter Card */
+.filterCard {
+  background-color: var(--bg-card, rgba(255, 255, 255, 0.7));
+  padding: 12px 18px;
+  border-radius: var(--radius-lg, 12px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.searchIcon {
+  color: var(--text-muted);
+}
+
+.searchInput {
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: var(--text-primary);
+  width: 100%;
+  outline: none;
+  font-weight: 500;
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* Table Card */
+.logTableCard {
+  background-color: var(--bg-card, rgba(255, 255, 255, 0.7));
+  border-radius: var(--radius-xl, 16px);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.logTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.logTable th {
+  padding: 14px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background-color: var(--bg-sidebar, rgba(0, 0, 0, 0.02));
+  border-bottom: 1px solid var(--border-color);
+}
+
+.logTable td {
+  padding: 14px 18px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.logTable tr:last-child td {
+  border-bottom: none;
+}
+
+.logTable tr:hover td {
+  background-color: rgba(0, 0, 0, 0.01);
+}
+
+:global(.dark-theme) .logTable tr:hover td {
+  background-color: rgba(255, 255, 255, 0.01);
+}
+
+.timeColumn {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.userColumn {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.tableIcon {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.detailsColumn {
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-primary);
+  max-width: 500px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Badges */
+.actionBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badgeSuccess {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.badgePrimary {
+  background-color: rgba(6, 182, 212, 0.1);
+  color: #06b6d4;
+  border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+.badgeDanger {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.badgePurple {
+  background-color: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.badgeWarning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.badgeInfo {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.badgeNormal {
+  background-color: rgba(107, 114, 128, 0.1);
+  color: var(--text-muted);
+  border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+/* Empty state */
+.emptyState {
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.emptyIcon {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+.emptyState span {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}

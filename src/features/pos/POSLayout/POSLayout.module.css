@@ -1,0 +1,55 @@
+.posWorkspace {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: calc(100vh - 100px); /* Bớt đi chiều cao của header POS */
+  animation: fadeIn var(--transition-smooth);
+}
+
+.tableSelectorArea {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr;
+  gap: 20px;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.leftSection {
+  height: 100%;
+  overflow: hidden;
+}
+
+.rightSection {
+  height: 100%;
+  overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  .container {
+    grid-template-columns: 1.4fr 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .posWorkspace {
+    height: auto;
+    overflow: visible;
+  }
+  
+  .container {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  
+  .leftSection, .rightSection {
+    height: auto;
+    overflow: visible;
+  }
+}

@@ -1,0 +1,309 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.filterBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  border-radius: var(--radius-lg);
+  gap: 16px;
+  background-color: var(--bg-card);
+}
+
+.searchWrapper {
+  flex: 0 0 280px;
+}
+
+.searchInput {
+  width: 100%;
+}
+
+.categoriesWrapper {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  max-width: 100%;
+}
+
+.categoriesWrapper::-webkit-scrollbar {
+  height: 4px;
+}
+
+.catTab {
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background-color: var(--bg-input);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.catTab:hover {
+  background-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.activeTab {
+  background-color: var(--primary-color);
+  color: var(--text-white) !important;
+  box-shadow: 0 4px 10px var(--primary-glow);
+}
+
+/* Grid layout */
+.gridWrapper {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.foodCard {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: transform var(--transition-bounce), box-shadow var(--transition-smooth), border-color var(--transition-fast);
+  position: relative;
+}
+
+.foodCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color);
+}
+
+/* Hiệu ứng nhún vật lý khi bấm chuột */
+.foodCard:active {
+  transform: translateY(1px) scale(0.95);
+  transition: transform 0.05s ease;
+}
+
+.cardImageArea {
+  position: relative;
+  aspect-ratio: 4/3;
+  width: 100%;
+  background-color: var(--bg-input);
+  overflow: hidden;
+}
+
+.foodImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-smooth);
+}
+
+.foodCard:hover .foodImg {
+  transform: scale(1.06);
+}
+
+/* Hết món */
+.outOfStockCard {
+  opacity: 0.65;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+.outOfStockCard:hover {
+  transform: none !important;
+  border-color: var(--border-color) !important;
+}
+
+.outOfStockCard:active {
+  transform: none !important;
+}
+
+.outOfStockOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.outOfStockOverlay span {
+  color: var(--text-white);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: 1px solid var(--text-white);
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+}
+
+/* Huy hiệu giỏ hàng */
+.cartQtyBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: var(--danger-color);
+  color: var(--text-white);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+  font-family: 'Outfit', var(--font-sans);
+  z-index: 2;
+  animation: badgePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badgePop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+.quickAddIcon {
+  position: absolute;
+  bottom: -40px;
+  right: 10px;
+  background-color: var(--primary-color);
+  color: var(--text-white);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px var(--primary-glow);
+  transition: all var(--transition-smooth);
+  opacity: 0;
+  z-index: 2;
+}
+
+.foodCard:hover .quickAddIcon {
+  bottom: 10px;
+  opacity: 1;
+}
+
+.quickAddIcon:hover {
+  background-color: var(--primary-hover);
+  transform: scale(1.1);
+}
+
+/* Card details */
+.cardInfo {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-grow: 1;
+}
+
+.foodName {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.foodDesc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  max-height: 2.8em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.foodPrice {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--primary-color);
+  font-family: 'Outfit', var(--font-sans);
+}
+
+.categoryLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background-color: var(--bg-input);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+}
+
+/* Empty state */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.emptyIcon {
+  margin-bottom: 16px;
+  color: var(--text-muted);
+}
+
+.emptyState h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.emptyState p {
+  font-size: 12px;
+  max-width: 300px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1024px) {
+  .filterBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .searchWrapper {
+    width: 100%;
+    flex: none;
+  }
+}

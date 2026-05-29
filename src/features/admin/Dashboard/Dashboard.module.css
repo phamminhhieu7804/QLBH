@@ -1,0 +1,1036 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn var(--transition-smooth);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.dateBadge {
+  padding: 8px 16px;
+  background-color: var(--bg-sidebar);
+  border-radius: var(--radius-round);
+  border: 1px solid var(--border-color);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Stats grid - Thích ứng 4 cột linh hoạt */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.statCard {
+  display: flex;
+  align-items: center;
+  padding: 20px 24px;
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--transition-bounce), box-shadow var(--transition-smooth);
+}
+
+.statCard:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: var(--shadow-lg);
+}
+
+.cardIconWrapper {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.iconBgBlue {
+  background-color: var(--primary-glow);
+  color: var(--primary-color);
+}
+
+.iconBgIndigo {
+  background-color: rgba(99, 102, 241, 0.15);
+  color: var(--secondary-color);
+}
+
+.iconBgGreen {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--success-color);
+}
+
+.iconBgOrange {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: var(--warning-color);
+}
+
+.iconBgTeal {
+  background-color: var(--accent-glow);
+  color: var(--accent-color);
+}
+
+.cardIcon {
+  flex-shrink: 0;
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-grow: 1;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.cardLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.cardValue {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-family: 'Outfit', var(--font-sans);
+}
+
+.cardValueSmall {
+  font-size: 17px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.trendRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.trendIcon {
+  color: var(--success-color);
+}
+
+.trendText {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.cardCornerGlow {
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+  filter: blur(10px);
+  z-index: 1;
+}
+
+/* Charts Grid */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 20px;
+}
+
+.chartCard, .recentOrdersCard {
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chartHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chartHeader h4 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.chartSubtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Chart Visual */
+.chartVisualWrapper {
+  height: 250px;
+  display: flex;
+  align-items: flex-end;
+  padding-top: 10px;
+}
+
+.chartArea {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.chartColumnWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 11%;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+}
+
+/* Hiển thị số tiền ở TRÊN đỉnh mỗi cột */
+.columnTopAmount {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--primary-color);
+  margin-bottom: 6px;
+  text-align: center;
+  white-space: nowrap;
+  font-family: 'Outfit', var(--font-sans);
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chartColumnContainer {
+  width: 100%;
+  height: 80%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
+}
+
+.chartColumn {
+  width: 24px;
+  background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
+  position: relative;
+}
+
+.chartColumn:hover {
+  background: linear-gradient(180deg, var(--accent-color) 0%, var(--primary-color) 100%);
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+}
+
+/* Tooltip on Column Hover */
+.columnTooltip {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+  opacity: 0;
+  background-color: var(--text-primary);
+  color: var(--text-white);
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-md);
+  z-index: 5;
+}
+
+.chartColumn:hover .columnTooltip {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.columnLabel {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-top: 10px;
+  text-align: center;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.columnNameText {
+  text-transform: capitalize;
+}
+
+.columnHoursSub {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+/* Recent Orders List */
+.ordersList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-grow: 1;
+  justify-content: flex-start;
+}
+
+.orderItem {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
+  transition: border-color var(--transition-fast);
+}
+
+.orderItem:hover {
+  border-color: var(--primary-color);
+}
+
+.orderInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-grow: 1;
+}
+
+.orderIdText {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.orderTimeText {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.orderItemsCount {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-right: 20px;
+  background-color: var(--bg-input);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+}
+
+.orderAmount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: 'Outfit', var(--font-sans);
+  margin-right: 15px;
+}
+
+.successStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--success-color);
+  box-shadow: 0 0 8px var(--success-color);
+}
+
+.emptyOrdersState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Bảng thống kê nước uống bán được */
+.drinkCard {
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.drinkTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  background-color: var(--bg-card);
+}
+
+.drinkTable th {
+  background-color: var(--bg-input);
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.drinkTable td {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.drinkTable tr:last-child td {
+  border-bottom: none;
+}
+
+.drinkTable tr:hover td {
+  background-color: rgba(59, 130, 246, 0.02);
+}
+
+.drinkNameColumn {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.qtyColumn {
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.numericColumn {
+  font-family: 'Outfit', var(--font-sans);
+  font-weight: 600;
+}
+
+.profitText {
+  color: var(--success-color);
+  font-weight: 700;
+}
+
+.marginBadge {
+  font-size: 11px;
+  font-weight: 700;
+  background-color: rgba(6, 182, 212, 0.1);
+  color: var(--accent-color);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+}
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-round);
+  display: inline-block;
+}
+
+.badgeHigh {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--success-color);
+}
+
+.badgeNormal {
+  background-color: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+.emptyTableState {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  background-color: var(--bg-card);
+}
+
+/* --- PHẦN THIẾT LẬP VỐN & CHỈ TIÊU LỢI NHUẬN --- */
+.goalsConfigPanel {
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.goalsHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+}
+
+.goalsTitleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.goalsTitleIcon {
+  color: var(--primary-color);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.goalsTitleWrapper h5 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.goalsSubtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.goalsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inputsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-end;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.inputGroup label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.capitalInput {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.capitalInput:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.goalsCalculatedRow {
+  display: flex;
+  gap: 20px;
+  flex: 1.5;
+  min-width: 300px;
+  justify-content: space-between;
+  background-color: var(--bg-sidebar);
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.calculatedItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calcLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.calcValueBlue {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--primary-color);
+  font-family: 'Outfit', var(--font-sans);
+}
+
+.calcValue {
+  font-size: 16px;
+  font-weight: 800;
+  font-family: 'Outfit', var(--font-sans);
+}
+
+.profitSuccess {
+  color: var(--success-color);
+}
+
+.profitPending {
+  color: var(--warning-color);
+}
+
+/* Thanh Tiến độ mục tiêu sinh lời */
+.progressBarWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: rgba(255, 255, 255, 0.4);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+:global(.dark-theme) .progressBarWrapper {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+.progressLabelRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.progressPercent {
+  color: var(--primary-color);
+}
+
+.progressBarContainer {
+  height: 10px;
+  background-color: var(--bg-input);
+  border-radius: var(--radius-round);
+  overflow: hidden;
+  position: relative;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-color) 100%);
+  border-radius: var(--radius-round);
+  transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1);
+}
+
+.progressSuccessFill {
+  background: linear-gradient(90deg, var(--success-color) 0%, #34d399 100%) !important;
+}
+
+.progressNote {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* --- DANH SÁCH MÓN ĂN BÁN CHẠY SỔ XUỐNG --- */
+.clickableCard {
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clickableCard:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 20px var(--primary-glow);
+}
+
+.cardExpanded {
+  overflow: visible !important;
+  z-index: 10 !important;
+  border-color: var(--accent-color) !important;
+}
+
+.topProductsDropdown {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: slideDownFade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popoverDivider {
+  border: 0;
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 4px 0 8px 0;
+  width: 100%;
+}
+
+.dropdownTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dropdownList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.dropdownList::-webkit-scrollbar {
+  width: 4px;
+}
+.dropdownList::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dropdownList::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 4px;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
+  font-size: 12px;
+  transition: all var(--transition-fast);
+}
+
+.dropdownItem:hover {
+  background-color: var(--primary-glow);
+  border-color: var(--primary-color);
+}
+
+.itemRank {
+  font-weight: 800;
+  color: var(--accent-color);
+  min-width: 20px;
+}
+
+.itemNameText {
+  flex-grow: 1;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemQtyValue {
+  font-weight: 700;
+  color: var(--text-secondary);
+  background-color: var(--bg-input);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.emptyDropdownText {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
+  font-style: italic;
+}
+
+/* --- CẤU HÌNH CA LÀM VIỆC --- */
+.chartTitleArea {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.shiftSettingsToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.shiftSettingsToggle:hover {
+  background-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.shiftSettingsToggleActive {
+  background-color: var(--primary-glow) !important;
+  color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+.shiftConfigPanel {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideDownFade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-bottom: 8px;
+}
+
+.configPanelTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.shiftList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-height: 120px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.shiftList::-webkit-scrollbar {
+  width: 4px;
+}
+.shiftList::-webkit-scrollbar-track {
+  background: transparent;
+}
+.shiftList::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 4px;
+}
+
+.shiftItemConfig {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius-round);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  font-size: 12px;
+}
+
+.shiftNameLabel {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.shiftHoursLabel {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.deleteShiftBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.deleteShiftBtn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--danger-color);
+}
+
+.addShiftForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px dashed var(--border-color);
+  padding-top: 12px;
+}
+
+.addShiftForm h6 {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.addShiftInputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.shiftNameInput {
+  flex: 1;
+  min-width: 150px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.shiftNameInput:focus {
+  border-color: var(--primary-color);
+}
+
+.hourSelects {
+  display: flex;
+  gap: 10px;
+}
+
+.hourInputGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hourInputGroup label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.hourSelect {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.addShiftSubmitBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  border: none;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+.addShiftSubmitBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.shiftErrorText {
+  font-size: 11px;
+  color: var(--danger-color);
+  font-weight: 600;
+}
+
+/* --- CỘT ĐƠN VỊ TRONG BẢNG NƯỚC --- */
+.unitColumn {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: left;
+}
+
+@media (max-width: 1024px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
