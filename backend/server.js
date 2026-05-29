@@ -35,7 +35,21 @@ const io = new Server(server, {
 app.set('io', io);
 
 // 4. Áp dụng các Middleware tiêu chuẩn
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://qlbh-ten.vercel.app' // Thêm chính xác tên miền mới của bạn vào đây
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Chặn bởi CORS bảo mật'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // 5. ÁP DỤNG TENANT ROUTER MIDDLEWARE CHO TẤT CẢ ĐƯỜNG DẪN /api
