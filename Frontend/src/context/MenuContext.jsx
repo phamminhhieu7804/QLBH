@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { TenantContext } from './TenantContext';
+import { TenantContext, getApiBaseUrl } from './TenantContext';
 import { logActivity } from './CartContext';
 
 // Tạo Context cho Thực đơn (Menu)
@@ -161,7 +161,7 @@ export const MenuProvider = ({ children }) => {
   const fetchMenu = async () => {
     if (!tenant || !restaurantId) return;
     try {
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/products?restaurantId=${restaurantId}&tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/products?restaurantId=${restaurantId}&tenant=${tenant}`, {
         headers: {
           'Content-Type': 'application/json',
           'x-tenant': tenant
@@ -204,7 +204,7 @@ export const MenuProvider = ({ children }) => {
         restaurantId
       };
 
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/products?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/products?tenant=${tenant}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -235,7 +235,7 @@ export const MenuProvider = ({ children }) => {
         isAvailable: updatedItem.status === 'active'
       };
 
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/products/${updatedItem.id}?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/products/${updatedItem.id}?tenant=${tenant}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -257,7 +257,7 @@ export const MenuProvider = ({ children }) => {
   const deleteMenuItem = async (id) => {
     const targetItem = menuItems.find((item) => item.id === id);
     try {
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/products/${id}?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/products/${id}?tenant=${tenant}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -286,7 +286,7 @@ export const MenuProvider = ({ children }) => {
         isAvailable: nextAvailable
       };
 
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/products/${id}?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/products/${id}?tenant=${tenant}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

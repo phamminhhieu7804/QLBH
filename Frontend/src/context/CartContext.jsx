@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { TenantContext } from './TenantContext';
+import { TenantContext, getApiBaseUrl } from './TenantContext';
 
 // Tạo Context cho Giỏ hàng (Cart) và Lịch sử đơn hàng
 export const CartContext = createContext();
@@ -125,7 +125,7 @@ export const CartProvider = ({ children }) => {
   const fetchTables = async () => {
     if (!tenant || !restaurantId) return;
     try {
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/tables?restaurantId=${restaurantId}&tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/tables?restaurantId=${restaurantId}&tenant=${tenant}`, {
         headers: {
           'Content-Type': 'application/json',
           'x-tenant': tenant
@@ -158,7 +158,7 @@ export const CartProvider = ({ children }) => {
   const fetchActiveOrder = async (tableId) => {
     if (!tenant || !tableId) return;
     try {
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/table/${tableId}?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/orders/table/${tableId}?tenant=${tenant}`, {
         headers: {
           'Content-Type': 'application/json',
           'x-tenant': tenant
@@ -215,7 +215,7 @@ export const CartProvider = ({ children }) => {
   const fetchOrdersHistory = async () => {
     if (!tenant || !restaurantId) return;
     try {
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/history?restaurantId=${restaurantId}&tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/orders/history?restaurantId=${restaurantId}&tenant=${tenant}`, {
         headers: {
           'Content-Type': 'application/json',
           'x-tenant': tenant
@@ -268,7 +268,7 @@ export const CartProvider = ({ children }) => {
       return { success: false, message: 'Vui lòng cung cấp đầy đủ thông tin' };
     }
     try {
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/tables?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/tables?tenant=${tenant}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -291,7 +291,7 @@ export const CartProvider = ({ children }) => {
   // Xóa bàn ăn qua API
   const deleteTable = async (tableId) => {
     try {
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/tables/${tableId}?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/tables/${tableId}?tenant=${tenant}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -339,7 +339,7 @@ export const CartProvider = ({ children }) => {
         quantity: 1
       };
 
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/add-item?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/orders/add-item?tenant=${tenant}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -379,7 +379,7 @@ export const CartProvider = ({ children }) => {
         return;
       }
 
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/update-item-qty?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/orders/update-item-qty?tenant=${tenant}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -406,7 +406,7 @@ export const CartProvider = ({ children }) => {
     }
 
     try {
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/remove-item?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/orders/remove-item?tenant=${tenant}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -431,7 +431,7 @@ export const CartProvider = ({ children }) => {
       if (!targetItem) return;
 
       const nextStatus = targetItem.served ? 'pending' : 'completed';
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/update-item-status?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/orders/update-item-status?tenant=${tenant}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -457,7 +457,7 @@ export const CartProvider = ({ children }) => {
       if (!targetItem) return;
 
       const nextStatus = targetItem.served ? 'pending' : 'completed';
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/update-item-status?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/orders/update-item-status?tenant=${tenant}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -485,7 +485,7 @@ export const CartProvider = ({ children }) => {
         quantity: item.quantity
       }));
 
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/orders/customer-submit?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/orders/customer-submit?tenant=${tenant}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -515,7 +515,7 @@ export const CartProvider = ({ children }) => {
     if (!meta || !meta.dbOrderId) return;
 
     try {
-      const res = await fetch(`https://qlbh-zsvr.onrender.com/api/payments/verify-vietqr?tenant=${tenant}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/payments/verify-vietqr?tenant=${tenant}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -3,6 +3,15 @@ import React, { createContext, useState, useEffect } from 'react';
 // Tạo Context cho việc định danh Quán (Tenant) và Tài khoản
 export const TenantContext = createContext();
 
+// Hàm xác định URL máy chủ API động dựa trên môi trường chạy thực tế
+export const getApiBaseUrl = () => {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+  return 'https://qlbh-zsvr.onrender.com';
+};
+
+
 // Danh sách tài khoản demo mặc định ban đầu
 const DEFAULT_USERS = [
   {
@@ -177,22 +186,56 @@ export const TenantProvider = ({ children }) => {
     setBankAccountName(localStorage.getItem(`saas_bank_account_name_${tenant}`) || '');
     setBankFullName(localStorage.getItem(`saas_bank_full_name_${tenant}`) || '');
 
+    // Hàm fetch có Timeout sử dụng AbortController để hủy request treo quá lâu
+    const fetchWithTimeout = async (url, options = {}, timeoutMs = 10000) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+      } catch (error) {
+        clearTimeout(id);
+        throw error;
+      }
+    };
+
     const fetchRestaurantInfo = async () => {
       setIsBackendConnecting(true);
       setBackendError(null);
       let attempts = 0;
-      const maxAttempts = 15; // 15 attempts * 5s = 75 seconds max wait for Render wake up
+      let isTimedOut = false;
+      
+      // Hủy bỏ trạng thái chờ và reset màn hình sau đúng 60 giây (1 phút) để tránh bị treo vô tận
+      const globalTimeoutId = setTimeout(() => {
+        isTimedOut = true;
+        setIsBackendConnecting(false);
+        setBackendError('Kết nối dữ liệu thất bại (Timeout > 1 phút). Máy chủ MongoDB Atlas hoặc Localhost không phản hồi. Vui lòng thử lại!');
+        console.error('[Tenant DB Connection] Global connection timeout reached (60s). Handled hang gracefully.');
+      }, 60000);
       
       const tryFetch = async () => {
+        if (isTimedOut) return;
+        
         try {
-          const res = await fetch(`https://qlbh-zsvr.onrender.com/api/restaurant?tenant=${tenant}`, {
+          const baseUrl = getApiBaseUrl();
+          const res = await fetchWithTimeout(`${baseUrl}/api/restaurant?tenant=${tenant}`, {
             headers: {
               'Content-Type': 'application/json',
               'x-tenant': tenant
             }
-          });
+          }, 10000); // 10 giây timeout cho mỗi lượt request đơn lẻ
+          
+          if (!res.ok) {
+            throw new Error(`Server returned HTTP ${res.status}`);
+          }
+          
           const data = await res.json();
           if (data.success && data.data) {
+            clearTimeout(globalTimeoutId);
             const id = data.data._id;
             setRestaurantId(id);
             localStorage.setItem(`saas_restaurant_id_${tenant}`, id);
@@ -230,16 +273,15 @@ export const TenantProvider = ({ children }) => {
             setBackendError(null);
             console.log('[Tenant DB Connection] Connected and synchronized successfully to tenant database!');
             return;
+          } else {
+            throw new Error(data.message || 'Failed to fetch restaurant configuration');
           }
         } catch (err) {
+          if (isTimedOut) return;
+          
           attempts++;
-          console.warn(`[Tenant DB Connection] Attempt ${attempts} failed. Render server might be sleeping. Retrying in 5s...`);
-          if (attempts < maxAttempts) {
-            setTimeout(tryFetch, 5000);
-          } else {
-            setIsBackendConnecting(false);
-            setBackendError('Máy chủ dữ liệu không phản hồi. Vui lòng xác minh cấu hình MongoDB của Render Backend!');
-          }
+          console.warn(`[Tenant DB Connection] Attempt ${attempts} failed: ${err.message}. Retrying in 5s...`);
+          setTimeout(tryFetch, 5000);
         }
       };
 
@@ -274,7 +316,8 @@ export const TenantProvider = ({ children }) => {
     }
 
     try {
-      const res = await fetch('https://qlbh-zsvr.onrender.com/api/restaurant/config', {
+      const baseUrl = getApiBaseUrl();
+      const res = await fetch(`${baseUrl}/api/restaurant/config`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -320,7 +363,8 @@ export const TenantProvider = ({ children }) => {
   const saveFinancialConfig = async (capital, rate) => {
     if (!tenant || !restaurantId) return { success: false, message: 'Chưa kết nối cơ sở dữ liệu!' };
     try {
-      const res = await fetch('https://qlbh-zsvr.onrender.com/api/restaurant/config', {
+      const baseUrl = getApiBaseUrl();
+      const res = await fetch(`${baseUrl}/api/restaurant/config`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
