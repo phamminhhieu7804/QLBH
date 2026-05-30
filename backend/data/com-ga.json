@@ -1,0 +1,194 @@
+{
+  "restaurant": {
+    "_id": "com-ga",
+    "name": "Com Ga",
+    "ownerName": "Chủ Quán",
+    "phone": "",
+    "address": "",
+    "config": {
+      "initialInvestment": null,
+      "targetProfitMargin": null,
+      "backupEmails": []
+    },
+    "bankId": "tpb",
+    "customBank": "",
+    "bankAccountNo": "0356959935",
+    "bankAccountName": "PHAM MINH HIEU",
+    "bankFullName": "TPBank"
+  },
+  "tables": [
+    {
+      "_id": "ac4a6dcd-06f2-4d8a-acce-98400b463e95",
+      "tableName": "Bàn 01",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=ac4a6dcd-06f2-4d8a-acce-98400b463e95"
+    },
+    {
+      "_id": "12b4b4ea-f822-4179-9aad-a5fbc8c0957b",
+      "tableName": "Bàn 02",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=12b4b4ea-f822-4179-9aad-a5fbc8c0957b"
+    },
+    {
+      "_id": "18e67059-447c-4882-8805-e761321ddd17",
+      "tableName": "Bàn 03",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=18e67059-447c-4882-8805-e761321ddd17"
+    },
+    {
+      "_id": "3b488965-d8bb-4a58-bfd7-35d9243003b6",
+      "tableName": "Bàn 04",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=3b488965-d8bb-4a58-bfd7-35d9243003b6"
+    },
+    {
+      "_id": "e42b3f54-b15e-4c42-bb51-d3dd24b73c86",
+      "tableName": "Bàn 05",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=e42b3f54-b15e-4c42-bb51-d3dd24b73c86"
+    },
+    {
+      "_id": "275b0131-14e7-4972-b433-3425e9ea829d",
+      "tableName": "Bàn 06",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=275b0131-14e7-4972-b433-3425e9ea829d"
+    },
+    {
+      "_id": "72aa0446-33c0-4897-a1e5-85e4cf4348b6",
+      "tableName": "Bàn 07",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=72aa0446-33c0-4897-a1e5-85e4cf4348b6"
+    },
+    {
+      "_id": "140cea9a-a11d-4bb8-8c55-0b779250bb8e",
+      "tableName": "Bàn 08",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=140cea9a-a11d-4bb8-8c55-0b779250bb8e"
+    },
+    {
+      "_id": "25cd0b7a-c84f-4b84-a45e-3380b69251f1",
+      "tableName": "Bàn 09",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=25cd0b7a-c84f-4b84-a45e-3380b69251f1"
+    },
+    {
+      "_id": "190b6980-c1ef-4776-8836-8a265196986a",
+      "tableName": "Bàn 10",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=190b6980-c1ef-4776-8836-8a265196986a"
+    },
+    {
+      "_id": "3d8d1299-705b-4a94-a25a-54395f0004bf",
+      "tableName": "Bàn 11",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=3d8d1299-705b-4a94-a25a-54395f0004bf"
+    },
+    {
+      "_id": "ff4c181c-536d-43e8-973b-ab87ec1abbb7",
+      "tableName": "Bàn 12",
+      "status": "trong",
+      "qrCodeUrl": "https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=com-ga&table=ff4c181c-536d-43e8-973b-ab87ec1abbb7"
+    }
+  ],
+  "products": [
+    {
+      "_id": "9a4c557b-47fb-41b1-8d06-8765aa9e1abc",
+      "name": "Phở Bò Tái Lăn Hà Nội",
+      "price": 65000,
+      "costPrice": 28000,
+      "category": "Món chính",
+      "image": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "description": "Phở bò tái lăn đậm vị truyền thống, thịt bò xào xèo thơm phức tỏi gừng và nhiều hành lá.",
+      "isAvailable": true
+    },
+    {
+      "_id": "3e3b1ea8-f887-4812-bdc5-d3516dc03e66",
+      "name": "Cơm Tấm Sườn Bì Chả",
+      "price": 59000,
+      "costPrice": 25000,
+      "category": "Món chính",
+      "image": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "description": "Cơm tấm dẻo thơm ăn kèm sườn heo nướng mật ong vàng ruộm, bì dai giòn và chả trứng chưng.",
+      "isAvailable": true
+    },
+    {
+      "_id": "836f8f10-43f2-4625-8dda-aa311dfc68e7",
+      "name": "Bún Chả Nem Cua Bể",
+      "price": 75000,
+      "costPrice": 32000,
+      "category": "Món chính",
+      "image": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "description": "Bún chả Hà Nội nướng than hoa thơm lừng kết hợp nem cua bể giòn rụm nhiều thịt cua.",
+      "isAvailable": true
+    },
+    {
+      "_id": "63aac1ee-c7de-48c8-817b-70e6ed681cb5",
+      "name": "Cà Phê Muối Huế",
+      "price": 35000,
+      "costPrice": 12000,
+      "category": "Nước uống",
+      "image": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "description": "Cà phê phin đậm đà hòa quyện cùng lớp kem muối béo ngậy mằn mặn đặc trưng.",
+      "isAvailable": true
+    },
+    {
+      "_id": "64cedbe3-2a25-417e-8992-50d41f59ac08",
+      "name": "Trà Đào Hồng Đài Các",
+      "price": 42000,
+      "costPrice": 15000,
+      "category": "Nước uống",
+      "image": "https://images.unsplash.com/photo-1497515114629-f71d768fd07c?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "description": "Trà đào thanh mát nấu cùng đào miếng giòn ngọt, sả thơm giải nhiệt cực tốt.",
+      "isAvailable": true
+    },
+    {
+      "_id": "caa5a329-d0cc-446e-9a07-9f3ec64a2681",
+      "name": "Bánh Mì Nướng Muối Ớt",
+      "price": 30000,
+      "costPrice": 12000,
+      "category": "Ăn vặt",
+      "image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "description": "Bánh mì nướng giòn quét bơ mật ong, muối ớt tôm, mỡ hành phi, chà bông ruốc béo ngậy.",
+      "isAvailable": true
+    },
+    {
+      "_id": "4b52face-cfa9-42ac-bc94-dbea8aad7c36",
+      "name": "Chè Khúc Bạch Trân Châu",
+      "price": 45000,
+      "costPrice": 18000,
+      "category": "Tráng miệng",
+      "image": "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+      "description": "Thạch khúc bạch phô mai dẻo béo, nước đường phèn nhãn nhục ngọt thanh kèm hạnh nhân rang vàng.",
+      "isAvailable": true
+    }
+  ],
+  "orders": [
+    {
+      "_id": "a8ec722d-a12e-4a98-9ac3-c75f42781b6e",
+      "tableId": "ac4a6dcd-06f2-4d8a-acce-98400b463e95",
+      "paymentStatus": "paid",
+      "items": [
+        {
+          "orderItemId": "81131329-915f-4b40-adc0-8f33a0786fa9",
+          "productId": "63aac1ee-c7de-48c8-817b-70e6ed681cb5",
+          "name": "Cà Phê Muối Huế",
+          "price": 35000,
+          "quantity": 1,
+          "status": "pending"
+        },
+        {
+          "orderItemId": "2a9fbb72-2f89-4e06-b877-16e7f9ed7765",
+          "productId": "9a4c557b-47fb-41b1-8d06-8765aa9e1abc",
+          "name": "Phở Bò Tái Lăn Hà Nội",
+          "price": 65000,
+          "quantity": 1,
+          "status": "pending"
+        }
+      ],
+      "createdAt": "2026-05-30T06:48:00.617Z",
+      "updatedAt": "2026-05-30T06:48:48.099Z",
+      "totalAmount": 100000,
+      "finalAmount": 100000
+    }
+  ]
+}

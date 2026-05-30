@@ -2,7 +2,6 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { connectDB } from './config/db.js';
 import { initSocketHandler } from './socket/socketHandler.js';
 import { tenantMiddleware } from './middleware/tenantMiddleware.js';
 
@@ -16,9 +15,6 @@ import paymentRoutes from './routes/paymentRoutes.js';
 // Import Controller phục vụ tuyến đường báo cáo Dashboard và thông tin Quán
 import { getDashboardReport } from './controllers/orderController.js';
 import { getRestaurant } from './controllers/restaurantController.js';
-
-// 1. Khởi động Connection Pool Manager đa quán
-connectDB();
 
 // 2. Khởi tạo Express App và Server HTTP
 const app = express();
