@@ -5,7 +5,7 @@ const connections = {};
 let baseConnection = null;
 
 // Hàm kết nối động lấy Connection riêng của Quán (Tenant)
-export const getTenantConnection = (tenantCode) => {
+export const getTenantConnection = async (tenantCode) => {
   if (!tenantCode) return null;
   
   // Chuẩn hóa mã Quán thành tên Database viết thường, không khoảng trắng, không dấu tiếng Việt (an toàn tuyệt đối cho MongoDB Atlas)
@@ -19,7 +19,7 @@ export const getTenantConnection = (tenantCode) => {
   const dbName = `order-quan-ly-ban-hang-by-sinh-vien-bonnie-${cleanTenant}`;
   
   // Nếu đã có sẵn kết nối hoạt động trong Pool Cache, trả về ngay
-  if (connections[dbName]) {
+  if (connections[dbName] && baseConnection && baseConnection.readyState === 1) {
     return connections[dbName];
   }
   
@@ -28,7 +28,8 @@ export const getTenantConnection = (tenantCode) => {
     const uri = process.env.MONGODB_URI || process.env.MONGODB_URI_PREFIX || 'mongodb://127.0.0.1:27017/admin';
     console.log(`[Multi-Tenant] Đang mở kết nối cơ sở tới MongoDB Atlas/Server...`);
     baseConnection = mongoose.createConnection(uri, {
-      serverSelectionTimeoutMS: 8000
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 15000
     });
     
     baseConnection.on('connected', () => {
@@ -38,6 +39,17 @@ export const getTenantConnection = (tenantCode) => {
     baseConnection.on('error', (err) => {
       console.error(`[Multi-Tenant] Lỗi kết nối cơ sở tới MongoDB: ${err.message}`);
     });
+  }
+
+  // 1.5. Chờ kết nối hoàn tất. Nếu quá thời gian (5 giây) hoặc lỗi, sẽ ném lỗi ngay để tránh treo server (hanging)
+  if (baseConnection.readyState !== 1) { // 1 = connected
+    try {
+      await baseConnection.asPromise();
+    } catch (error) {
+      console.error(`[Multi-Tenant] Thất bại khi kết nối MongoDB: ${error.message}`);
+      baseConnection = null; // Hủy pool cũ để request sau thử lại kết nối
+      throw new Error('Lỗi máy chủ: Không thể kết nối đến cơ sở dữ liệu MongoDB Atlas (Kiểm tra lại MONGODB_URI hoặc cấu hình Network Access IP)');
+    }
   }
   
   // 2. Sử dụng useDb của Mongoose để tạo kết nối riêng ảo trên cùng 1 TCP pool

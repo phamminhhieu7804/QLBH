@@ -12,8 +12,8 @@ export const tenantMiddleware = async (req, res, next) => {
     // Ưu tiên: Header -> Query -> Body. Nếu không có thì dùng 'default' để tránh crash
     const tenantCode = tenantHeader || tenantQuery || tenantBody || 'default';
 
-    // 2. Lấy đối tượng kết nối động dành riêng cho quán này
-    const dbConnection = getTenantConnection(tenantCode);
+    // 2. Lấy đối tượng kết nối động dành riêng cho quán này (Sử dụng await để bắt lỗi kết nối hoặc timeout)
+    const dbConnection = await getTenantConnection(tenantCode);
 
     if (!dbConnection) {
       return res.status(400).json({
