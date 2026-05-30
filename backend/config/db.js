@@ -2,7 +2,6 @@ import mongoose from 'mongoose';
 
 // Map lưu trữ các kết nối DB của các quán để tránh mở kết nối mới liên tục (Connection Pool Cache)
 const connections = {};
-let baseConnection = null;
 
 // Hàm kết nối động lấy Connection riêng của Quán (Tenant)
 export const getTenantConnection = async (tenantCode) => {
@@ -18,48 +17,36 @@ export const getTenantConnection = async (tenantCode) => {
 
   const dbName = `order-quan-ly-ban-hang-by-sinh-vien-bonnie-${cleanTenant}`;
   
-  // Nếu đã có sẵn kết nối hoạt động trong Pool Cache, trả về ngay
-  if (connections[dbName] && baseConnection && baseConnection.readyState === 1) {
+  // 1. Kiểm tra cache kết nối (không tạo lại kết nối nếu tenant đã truy cập trước đó)
+  if (connections[dbName]) {
     return connections[dbName];
   }
   
-  // 1. Khởi tạo kết nối cơ sở (Base Connection) nếu chưa có
-  if (!baseConnection) {
-    const uri = process.env.MONGODB_URI || process.env.MONGODB_URI_PREFIX || 'mongodb://127.0.0.1:27017/admin';
-    console.log(`[Multi-Tenant] Đang mở kết nối cơ sở tới MongoDB Atlas/Server...`);
-    baseConnection = mongoose.createConnection(uri, {
+  try {
+    const rawUri = process.env.MONGODB_URI || process.env.MONGODB_URI_PREFIX || 'mongodb://127.0.0.1:27017/admin';
+    const parsedUri = new URL(rawUri);
+    
+    // Ghi đè tên database
+    parsedUri.pathname = `/${dbName}`;
+    const tenantUri = parsedUri.toString();
+
+    console.log(`[Multi-Tenant] Đang tạo kết nối mới tới database: ${dbName}...`);
+    
+    // 2. Tạo và đợi kết nối thành công tuyệt đối bằng asPromise()
+    const conn = await mongoose.createConnection(tenantUri, {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 15000
-    });
+    }).asPromise();
     
-    baseConnection.on('connected', () => {
-      console.log(`[Multi-Tenant] Đã kết nối cơ sở tới MongoDB thành công!`);
-    });
+    // 3. Cache lại kết nối
+    connections[dbName] = conn;
+    console.log(`[Multi-Tenant] Đã kết nối thành công tới database: ${dbName}`);
     
-    baseConnection.on('error', (err) => {
-      console.error(`[Multi-Tenant] Lỗi kết nối cơ sở tới MongoDB: ${err.message}`);
-    });
+    return conn;
+  } catch (error) {
+    console.error(`[Multi-Tenant] Lỗi kết nối tenant db (${dbName}):`, error.message);
+    throw new Error('Lỗi máy chủ: Không thể kết nối đến cơ sở dữ liệu MongoDB Atlas (Kiểm tra lại MONGODB_URI hoặc cấu hình Network Access IP)');
   }
-
-  // 1.5. Chờ kết nối hoàn tất. Nếu quá thời gian (5 giây) hoặc lỗi, sẽ ném lỗi ngay để tránh treo server (hanging)
-  if (baseConnection.readyState !== 1) { // 1 = connected
-    try {
-      await baseConnection.asPromise();
-    } catch (error) {
-      console.error(`[Multi-Tenant] Thất bại khi kết nối MongoDB: ${error.message}`);
-      baseConnection = null; // Hủy pool cũ để request sau thử lại kết nối
-      throw new Error('Lỗi máy chủ: Không thể kết nối đến cơ sở dữ liệu MongoDB Atlas (Kiểm tra lại MONGODB_URI hoặc cấu hình Network Access IP)');
-    }
-  }
-  
-  // 2. Sử dụng useDb của Mongoose để tạo kết nối riêng ảo trên cùng 1 TCP pool
-  // Thiết lập useCache: true để Mongoose tự quản lý cache connection, tránh overload socket
-  console.log(`[Multi-Tenant] Đang phân tuyến cơ sở dữ liệu động: ${dbName}...`);
-  const connection = baseConnection.useDb(dbName, { useCache: true });
-  
-  // Lưu vào Pool Cache để tái sử dụng
-  connections[dbName] = connection;
-  return connection;
 };
 
 // Dummy log kết nối khi khởi động hệ thống
@@ -70,21 +57,7 @@ export const connectDB = async () => {
   
   console.log(`=======================================================`);
   console.log(`[Multi-Tenant] Connection Pool Manager khởi động ONLINE!`);
-  console.log(`[Multi-Tenant] Địa chỉ MongoDB: ${maskedUri}`);
-  
-  if (!baseConnection) {
-    baseConnection = mongoose.createConnection(uri, {
-      serverSelectionTimeoutMS: 8000
-    });
-    
-    baseConnection.on('connected', () => {
-      console.log(`[Multi-Tenant] Kết nối cơ sở MongoDB Atlas thành công!`);
-    });
-    
-    baseConnection.on('error', (err) => {
-      console.error(`[Multi-Tenant] Lỗi kết nối cơ sở MongoDB Atlas: ${err.message}`);
-    });
-  }
+  console.log(`[Multi-Tenant] Địa chỉ gốc MongoDB: ${maskedUri}`);
   console.log(`=======================================================`);
 };
 
