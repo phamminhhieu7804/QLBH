@@ -257,3 +257,27 @@ export const OrderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// ---------------------------------------------------------------------------
+// HÀM TIỆN ÍCH LẤY MODEL ĐỘNG (NGĂN CHẶN OVERWRITE MODEL ERROR)
+// ---------------------------------------------------------------------------
+
+export const getRestaurantModel = (tenantConnection) => {
+  if (!tenantConnection) return null;
+  return tenantConnection.models.Restaurant || tenantConnection.model('Restaurant', RestaurantSchema);
+};
+
+export const getTableModel = (tenantConnection) => {
+  if (!tenantConnection) return null;
+  return tenantConnection.models.Table || tenantConnection.model('Table', TableSchema);
+};
+
+export const getProductModel = (tenantConnection) => {
+  if (!tenantConnection) return null;
+  return tenantConnection.models.Product || tenantConnection.model('Product', ProductSchema);
+};
+
+export const getOrderModel = (tenantConnection) => {
+  if (!tenantConnection) return null;
+  return tenantConnection.models.Order || tenantConnection.model('Order', OrderSchema);
+};

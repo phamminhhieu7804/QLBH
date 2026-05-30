@@ -1,4 +1,4 @@
-import { TableSchema, ProductSchema } from './db.js';
+import { getTableModel, getProductModel } from './db.js';
 
 // 1. Thực đơn mẫu truyền thống (Quán phở truyền thống - mặc định)
 export const TRADITIONAL_MENU = [
@@ -123,8 +123,8 @@ export const MILKTEA_MENU = [
 // Hàm tự động seed dữ liệu cho cơ sở dữ liệu của một quán
 export const seedTenantData = async (dbConnection, tenantCode, restaurantId) => {
   try {
-    const Table = dbConnection.models.Table || dbConnection.model('Table', TableSchema);
-    const Product = dbConnection.models.Product || dbConnection.model('Product', ProductSchema);
+    const Table = getTableModel(dbConnection);
+    const Product = getProductModel(dbConnection);
 
     // 1. Seed 12 bàn mặc định
     const tableCount = await Table.countDocuments();

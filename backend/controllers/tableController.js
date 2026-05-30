@@ -1,4 +1,4 @@
-import { TableSchema, RestaurantSchema } from '../config/db.js';
+import { getTableModel, getRestaurantModel } from '../config/db.js';
 
 // [GET] /api/tables
 // Lấy danh sách tất cả các bàn kèm trạng thái động
@@ -11,7 +11,7 @@ export const getAllTables = async (req, res) => {
     }
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Table = req.tenantDb.models.Table || req.tenantDb.model('Table', TableSchema);
+    const Table = getTableModel(req.tenantDb);
     const tables = await Table.find({ restaurantId }).sort({ tableName: 1 });
 
     return res.status(200).json({
@@ -34,8 +34,8 @@ export const createTable = async (req, res) => {
     }
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Table = req.tenantDb.models.Table || req.tenantDb.model('Table', TableSchema);
-    const Restaurant = req.tenantDb.models.Restaurant || req.tenantDb.model('Restaurant', RestaurantSchema);
+    const Table = getTableModel(req.tenantDb);
+    const Restaurant = getRestaurantModel(req.tenantDb);
 
     const restaurant = await Restaurant.findById(restaurantId);
     if (!restaurant) {
@@ -84,7 +84,7 @@ export const createTable = async (req, res) => {
 export const deleteTable = async (req, res) => {
   try {
     const { id } = req.params;
-    const Table = req.tenantDb.models.Table || req.tenantDb.model('Table', TableSchema);
+    const Table = getTableModel(req.tenantDb);
 
     const table = await Table.findByIdAndDelete(id);
     if (!table) {

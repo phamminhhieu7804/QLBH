@@ -1,4 +1,4 @@
-import { OrderSchema, TableSchema, ProductSchema, RestaurantSchema } from '../config/db.js';
+import { getOrderModel, getTableModel, getProductModel, getRestaurantModel } from '../config/db.js';
 
 // Hàm tính toán lại tổng tiền của Order (Helper)
 const recalculateOrderTotals = (order) => {
@@ -15,8 +15,8 @@ export const getActiveOrderByTableId = async (req, res) => {
     const { tableId } = req.params;
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Order = req.tenantDb.models.Order || req.tenantDb.model('Order', OrderSchema);
-    req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema); // Đăng ký Product model để populate hoạt động
+    const Order = getOrderModel(req.tenantDb);
+    getProductModel(req.tenantDb); // Đăng ký Product model để populate hoạt động
 
     const order = await Order.findOne({ tableId, paymentStatus: 'pending' }).populate('items.productId');
 
@@ -50,8 +50,8 @@ export const addItemToOrder = async (req, res) => {
     }
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
-    const Order = req.tenantDb.models.Order || req.tenantDb.model('Order', OrderSchema);
+    const Product = getProductModel(req.tenantDb);
+    const Order = getOrderModel(req.tenantDb);
 
     // 1. Tìm thông tin sản phẩm gốc
     const product = await Product.findById(productId);
@@ -130,7 +130,7 @@ export const updateOrderItemStatus = async (req, res) => {
     }
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Order = req.tenantDb.models.Order || req.tenantDb.model('Order', OrderSchema);
+    const Order = getOrderModel(req.tenantDb);
 
     // Tìm hóa đơn chứa dòng món ăn duy nhất này
     const order = await Order.findOne({ 'items.orderItemId': orderItemId });
@@ -179,9 +179,9 @@ export const customerSubmitQROrder = async (req, res) => {
     }
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
-    const Order = req.tenantDb.models.Order || req.tenantDb.model('Order', OrderSchema);
-    const Table = req.tenantDb.models.Table || req.tenantDb.model('Table', TableSchema);
+    const Product = getProductModel(req.tenantDb);
+    const Order = getOrderModel(req.tenantDb);
+    const Table = getTableModel(req.tenantDb);
 
     // Tìm hoặc tạo mới Order chưa thanh toán cho bàn
     let order = await Order.findOne({ tableId, paymentStatus: 'pending' });
@@ -261,8 +261,8 @@ export const verifyPaymentAndReleaseTable = async (req, res) => {
     }
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Order = req.tenantDb.models.Order || req.tenantDb.model('Order', OrderSchema);
-    const Table = req.tenantDb.models.Table || req.tenantDb.model('Table', TableSchema);
+    const Order = getOrderModel(req.tenantDb);
+    const Table = getTableModel(req.tenantDb);
 
     const order = await Order.findById(orderId);
     if (!order) {
@@ -312,9 +312,9 @@ export const getDashboardReport = async (req, res) => {
     }
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Restaurant = req.tenantDb.models.Restaurant || req.tenantDb.model('Restaurant', RestaurantSchema);
-    const Order = req.tenantDb.models.Order || req.tenantDb.model('Order', OrderSchema);
-    req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema); // Đăng ký Product model để populate hoạt động
+    const Restaurant = getRestaurantModel(req.tenantDb);
+    const Order = getOrderModel(req.tenantDb);
+    getProductModel(req.tenantDb); // Đăng ký Product model để populate hoạt động
 
     // 1. Tìm thông tin quán & Cấu hình tài chính đối chiếu
     const restaurant = await Restaurant.findById(restaurantId);
@@ -406,7 +406,7 @@ export const updateOrderItemQuantity = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp orderItemId và số lượng mới' });
     }
 
-    const Order = req.tenantDb.models.Order || req.tenantDb.model('Order', OrderSchema);
+    const Order = getOrderModel(req.tenantDb);
     const order = await Order.findOne({ 'items.orderItemId': orderItemId });
 
     if (!order) {
@@ -457,7 +457,7 @@ export const removeOrderItem = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp orderItemId' });
     }
 
-    const Order = req.tenantDb.models.Order || req.tenantDb.model('Order', OrderSchema);
+    const Order = getOrderModel(req.tenantDb);
     const order = await Order.findOne({ 'items.orderItemId': orderItemId });
 
     if (!order) {
@@ -500,8 +500,8 @@ export const getPaidOrdersHistory = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã restaurantId' });
     }
 
-    const Order = req.tenantDb.models.Order || req.tenantDb.model('Order', OrderSchema);
-    req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema); // Đăng ký Product model để populate hoạt động
+    const Order = getOrderModel(req.tenantDb);
+    getProductModel(req.tenantDb); // Đăng ký Product model để populate hoạt động
 
     // Lấy 50 hóa đơn đã thanh toán gần đây nhất, sắp xếp mới nhất lên đầu
     const history = await Order.find({ restaurantId, paymentStatus: 'paid' })

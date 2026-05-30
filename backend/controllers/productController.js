@@ -1,4 +1,4 @@
-import { ProductSchema } from '../config/db.js';
+import { getProductModel } from '../config/db.js';
 
 // [GET] /api/products
 // Lấy danh sách thực đơn của quán từ DB riêng
@@ -11,7 +11,7 @@ export const getProducts = async (req, res) => {
     }
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
+    const Product = getProductModel(req.tenantDb);
     const products = await Product.find({ restaurantId }).sort({ category: 1, name: 1 });
 
     return res.status(200).json({
@@ -34,7 +34,7 @@ export const createProduct = async (req, res) => {
     }
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
+    const Product = getProductModel(req.tenantDb);
 
     const product = new Product({
       name,
@@ -66,7 +66,7 @@ export const updateProduct = async (req, res) => {
     const { name, image, price, costPrice, category, isAvailable } = req.body;
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
+    const Product = getProductModel(req.tenantDb);
 
     const product = await Product.findById(id);
     if (!product) {
@@ -99,7 +99,7 @@ export const deleteProduct = async (req, res) => {
     const { id } = req.params;
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
+    const Product = getProductModel(req.tenantDb);
 
     const product = await Product.findByIdAndDelete(id);
     if (!product) {

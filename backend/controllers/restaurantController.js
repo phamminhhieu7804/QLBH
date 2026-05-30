@@ -1,4 +1,4 @@
-import { RestaurantSchema, TableSchema, ProductSchema } from '../config/db.js';
+import { getRestaurantModel, getTableModel, getProductModel } from '../config/db.js';
 
 // [GET] /api/restaurant/info?tableId=...
 // Khách hàng quét mã QR tại bàn -> Trả về thông tin Quán và toàn bộ Menu từ DB riêng của quán
@@ -11,9 +11,9 @@ export const getRestaurantInfoByTableId = async (req, res) => {
     }
 
     // Khởi tạo hoặc tái sử dụng model động trên kết nối riêng biệt của request này
-    const Table = req.tenantDb.models.Table || req.tenantDb.model('Table', TableSchema);
-    const Restaurant = req.tenantDb.models.Restaurant || req.tenantDb.model('Restaurant', RestaurantSchema);
-    const Product = req.tenantDb.models.Product || req.tenantDb.model('Product', ProductSchema);
+    const Table = getTableModel(req.tenantDb);
+    const Restaurant = getRestaurantModel(req.tenantDb);
+    const Product = getProductModel(req.tenantDb);
 
     // 1. Tìm thông tin Bàn
     const table = await Table.findById(tableId);
@@ -74,7 +74,7 @@ export const updateFinancialConfig = async (req, res) => {
     }
 
     // Khởi tạo hoặc tái sử dụng model động
-    const Restaurant = req.tenantDb.models.Restaurant || req.tenantDb.model('Restaurant', RestaurantSchema);
+    const Restaurant = getRestaurantModel(req.tenantDb);
 
     // Kiểm tra xem Quán có tồn tại hay không
     const restaurant = await Restaurant.findById(restaurantId);
@@ -124,7 +124,7 @@ export const getRestaurant = async (req, res) => {
     const { tenant } = req.query;
     const tenantCode = tenant || req.headers['x-tenant'] || req.tenantCode || 'default';
 
-    const Restaurant = req.tenantDb.models.Restaurant || req.tenantDb.model('Restaurant', RestaurantSchema);
+    const Restaurant = getRestaurantModel(req.tenantDb);
 
     let restaurant = await Restaurant.findOne();
 

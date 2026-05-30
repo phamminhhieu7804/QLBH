@@ -1,4 +1,4 @@
-import { getTenantConnection, RestaurantSchema, TableSchema, ProductSchema } from '../config/db.js';
+import { getTenantConnection, getRestaurantModel, getTableModel, getProductModel } from '../config/db.js';
 import { seedTenantData } from '../config/seeder.js';
 
 // Middleware phân tuyến cơ sở dữ liệu động dành cho từng Quán (Multi-Tenant Routing)
@@ -22,10 +22,10 @@ export const tenantMiddleware = async (req, res, next) => {
       });
     }
 
-    // 3. Khởi tạo hoặc tái sử dụng Models động trên kết nối riêng của Tenant này để tránh OverwriteModelError
-    const Restaurant = dbConnection.models.Restaurant || dbConnection.model('Restaurant', RestaurantSchema);
-    const Table = dbConnection.models.Table || dbConnection.model('Table', TableSchema);
-    const Product = dbConnection.models.Product || dbConnection.model('Product', ProductSchema);
+    // 3. Khởi tạo hoặc tái sử dụng Models động thông qua Helper an toàn chống OverwriteModelError
+    const Restaurant = getRestaurantModel(dbConnection);
+    const Table = getTableModel(dbConnection);
+    const Product = getProductModel(dbConnection);
 
     // 4. Tìm hoặc tự động tạo cấu hình Quán ăn (Restaurant) trong MongoDB
     let restaurant = await Restaurant.findOne();
