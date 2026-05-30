@@ -1,4 +1,4 @@
-import { getRestaurantModel, getTableModel, getProductModel } from '../config/db.js';
+import { runBackgroundBackup } from '../services/googleDriveBackup.js';
 
 // [GET] /api/restaurant/info?tableId=...
 // Khách hàng quét mã QR tại bàn -> Trả về thông tin Quán và toàn bộ Menu từ DB riêng của quán
@@ -10,13 +10,10 @@ export const getRestaurantInfoByTableId = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp tham số tableId' });
     }
 
-    // Khởi tạo hoặc tái sử dụng model động trên kết nối riêng biệt của request này
-    const Table = getTableModel(req.tenantDb);
-    const Restaurant = getRestaurantModel(req.tenantDb);
-    const Product = getProductModel(req.tenantDb);
+    const db = req.tenantDb;
 
-    // 1. Tìm thông tin Bàn
-    const table = await Table.findById(tableId);
+    // 1. Tìm thông tin Bàn trong file JSON
+    const table = db.data.tables.find(t => t._id === tableId);
     if (!table) {
       return res.status(204).json({ 
         success: true, 
@@ -25,14 +22,14 @@ export const getRestaurantInfoByTableId = async (req, res) => {
       });
     }
 
-    // 2. Tìm thông tin Quán ăn thuộc Bàn đó
-    const restaurant = await Restaurant.findById(table.restaurantId);
+    // 2. Tìm thông tin Quán ăn
+    const restaurant = db.data.restaurant;
     if (!restaurant) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin Quán ăn liên kết với Bàn này' });
     }
 
-    // 3. Lấy toàn bộ Menu sản phẩm của Quán đang hoạt động
-    const products = await Product.find({ restaurantId: restaurant._id, isAvailable: true });
+    // 3. Lấy toàn bộ Menu sản phẩm đang hoạt động của Quán
+    const products = db.data.products.filter(p => p.isAvailable === true);
 
     return res.status(200).json({
       success: true,
@@ -59,25 +56,20 @@ export const getRestaurantInfoByTableId = async (req, res) => {
 export const updateFinancialConfig = async (req, res) => {
   try {
     const { 
-      restaurantId, 
       initialInvestment, 
       targetProfitMargin,
       bankId,
       customBank,
       bankAccountNo,
       bankAccountName,
-      bankFullName
+      bankFullName,
+      backupEmail
     } = req.body;
 
-    if (!restaurantId) {
-      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã restaurantId' });
-    }
-
-    // Khởi tạo hoặc tái sử dụng model động
-    const Restaurant = getRestaurantModel(req.tenantDb);
+    const db = req.tenantDb;
+    const restaurant = db.data.restaurant;
 
     // Kiểm tra xem Quán có tồn tại hay không
-    const restaurant = await Restaurant.findById(restaurantId);
     if (!restaurant) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy Quán ăn cần cấu hình' });
     }
@@ -93,9 +85,23 @@ export const updateFinancialConfig = async (req, res) => {
         : Number(targetProfitMargin);
 
       restaurant.config = {
+        ...restaurant.config,
         initialInvestment: parsedInvestment,
         targetProfitMargin: parsedMargin
       };
+    }
+
+    // Cập nhật Gmail sao lưu
+    if (backupEmail !== undefined) {
+      if (!restaurant.config) restaurant.config = {};
+      
+      const emailList = restaurant.config.backupEmails || [];
+      const trimmedEmail = backupEmail.trim().toLowerCase();
+      
+      if (trimmedEmail && !emailList.includes(trimmedEmail)) {
+        emailList.push(trimmedEmail);
+        restaurant.config.backupEmails = emailList;
+      }
     }
 
     // Cập nhật cấu hình ngân hàng khi được truyền lên
@@ -105,7 +111,11 @@ export const updateFinancialConfig = async (req, res) => {
     if (bankAccountName !== undefined) restaurant.bankAccountName = bankAccountName;
     if (bankFullName !== undefined) restaurant.bankFullName = bankFullName;
 
-    await restaurant.save();
+    // Lệnh này lưu toàn bộ object đã thay đổi xuống file .json trên ổ cứng
+    await db.write();
+
+    // Chạy ngầm tiến trình tạo file Excel và upload lên Google Drive
+    runBackgroundBackup(req.tenantCode, restaurant);
 
     return res.status(200).json({
       success: true,
@@ -121,12 +131,10 @@ export const updateFinancialConfig = async (req, res) => {
 // Lấy thông tin cấu hình Quán ăn. Nếu chưa tồn tại, tự chèn dữ liệu mặc định để tự vá dữ liệu cho quán mới.
 export const getRestaurant = async (req, res) => {
   try {
-    const { tenant } = req.query;
-    const tenantCode = tenant || req.headers['x-tenant'] || req.tenantCode || 'default';
+    const tenantCode = req.tenantCode;
+    const db = req.tenantDb;
 
-    const Restaurant = getRestaurantModel(req.tenantDb);
-
-    let restaurant = await Restaurant.findOne();
+    let restaurant = db.data.restaurant;
 
     // Tự động tạo cấu hình mặc định mẫu nếu chưa có dữ liệu cấu hình trong DB riêng biệt của Tenant mới
     if (!restaurant) {
@@ -138,17 +146,24 @@ export const getRestaurant = async (req, res) => {
       if (tenantCode === 'pho-gia-truyen') readableName = 'Phở Gia Truyền';
       if (tenantCode === 'tra-sua-chill') readableName = 'Trà Sữa Chill';
 
-      restaurant = new Restaurant({
+      restaurant = {
+        _id: tenantCode,
         name: readableName,
         ownerName: 'Chủ Quán',
         phone: '',
         address: '',
         config: {
           initialInvestment: null,
-          targetProfitMargin: null
+          targetProfitMargin: null,
+          backupEmails: []
         }
-      });
-      await restaurant.save();
+      };
+      
+      db.data.restaurant = restaurant;
+      await db.write();
+
+      // Chạy ngầm tiến trình sao lưu cho Tenant vừa khởi tạo
+      runBackgroundBackup(tenantCode, restaurant);
 
       return res.status(201).json({
         success: true,

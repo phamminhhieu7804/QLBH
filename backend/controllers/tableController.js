@@ -1,18 +1,13 @@
-import { getTableModel, getRestaurantModel } from '../config/db.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // [GET] /api/tables
 // Lấy danh sách tất cả các bàn kèm trạng thái động
 export const getAllTables = async (req, res) => {
   try {
-    const { restaurantId } = req.query;
+    const db = req.tenantDb;
 
-    if (!restaurantId) {
-      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã restaurantId' });
-    }
-
-    // Khởi tạo hoặc tái sử dụng model động
-    const Table = getTableModel(req.tenantDb);
-    const tables = await Table.find({ restaurantId }).sort({ tableName: 1 });
+    // Lấy danh sách bàn từ mảng cục bộ và sắp xếp theo tên
+    const tables = [...db.data.tables].sort((a, b) => a.tableName.localeCompare(b.tableName));
 
     return res.status(200).json({
       success: true,
@@ -27,54 +22,46 @@ export const getAllTables = async (req, res) => {
 // Thêm bàn ăn mới và tự động sinh mã URL QR Code của riêng bàn đó
 export const createTable = async (req, res) => {
   try {
-    const { tableName, restaurantId } = req.body;
+    const { tableName } = req.body;
 
-    if (!tableName || !restaurantId) {
-      return res.status(400).json({ success: false, message: 'Vui lòng điền tên bàn và mã restaurantId' });
+    if (!tableName) {
+      return res.status(400).json({ success: false, message: 'Vui lòng điền tên bàn' });
     }
 
-    // Khởi tạo hoặc tái sử dụng model động
-    const Table = getTableModel(req.tenantDb);
-    const Restaurant = getRestaurantModel(req.tenantDb);
+    const db = req.tenantDb;
 
-    const restaurant = await Restaurant.findById(restaurantId);
-    if (!restaurant) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy Quán ăn hợp lệ' });
+    // Chống trùng lặp tên bàn trong mảng
+    const isExisted = db.data.tables.some(
+      t => t.tableName.toLowerCase().trim() === tableName.toLowerCase().trim()
+    );
+
+    if (isExisted) {
+      return res.status(400).json({ success: false, message: 'Tên bàn ăn này đã tồn tại trong quán!' });
     }
 
-    // Chuyển đổi tên quán thành Slug chuẩn để làm Tenant Code
-    const tenantSlug = restaurant.name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[đĐ]/g, 'd')
-      .replace(/([^a-z0-9\s-]|_)+/g, '')
-      .trim()
-      .replace(/\s+/g, '-');
-
-    // Tạo bàn ăn mới trong DB riêng của quán
-    const table = new Table({
-      tableName,
-      restaurantId,
-      status: 'trong'
-    });
-
+    const tableId = uuidv4();
+    
     // Sinh mã QR Code URL hướng trực tiếp tới trang order của bàn ăn này
-    // Sử dụng tên tenant động truyền trực tiếp từ req.tenantCode của quán
-    const qrCodeUrl = `https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=${req.tenantCode}&table=${table._id}`;
-    table.qrCodeUrl = qrCodeUrl;
+    const qrCodeUrl = `https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=${req.tenantCode}&table=${tableId}`;
 
-    await table.save();
+    const newTable = {
+      _id: tableId,
+      tableName: tableName.trim(),
+      status: 'trong',
+      qrCodeUrl: qrCodeUrl
+    };
+
+    db.data.tables.push(newTable);
+    
+    // Ghi lưu dữ liệu vào File siêu tốc
+    await db.write();
 
     return res.status(201).json({
       success: true,
       message: 'Khởi tạo bàn ăn và QR Code thành công!',
-      data: table
+      data: newTable
     });
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ success: false, message: 'Tên bàn ăn này đã tồn tại trong quán!' });
-    }
     return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi tạo bàn', error: error.message });
   }
 };
@@ -84,16 +71,22 @@ export const createTable = async (req, res) => {
 export const deleteTable = async (req, res) => {
   try {
     const { id } = req.params;
-    const Table = getTableModel(req.tenantDb);
+    const db = req.tenantDb;
 
-    const table = await Table.findByIdAndDelete(id);
-    if (!table) {
+    // Tìm index của bàn trong mảng
+    const tableIndex = db.data.tables.findIndex(t => t._id === id);
+    if (tableIndex === -1) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy bàn ăn cần xóa' });
     }
 
+    // Cắt phần tử khỏi mảng
+    const deletedTable = db.data.tables.splice(tableIndex, 1)[0];
+    
+    await db.write();
+
     return res.status(200).json({
       success: true,
-      message: `Đã xóa thành công bàn ăn: ${table.tableName}`
+      message: `Đã xóa thành công bàn ăn: ${deletedTable.tableName}`
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Lỗi xóa bàn ăn', error: error.message });

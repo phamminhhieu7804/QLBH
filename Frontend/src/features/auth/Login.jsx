@@ -19,6 +19,7 @@ export const Login = () => {
   const [fullName, setFullName] = useState('');
   const [payDay, setPayDay] = useState(5);
   const [selectedRole, setSelectedRole] = useState('admin'); // admin | cashier
+  const [backupEmail, setBackupEmail] = useState('');
 
   // States thông báo
   const [error, setError] = useState('');
@@ -52,7 +53,12 @@ export const Login = () => {
       return;
     }
 
-    const result = register(restaurantName, username, password, selectedRole, fullName, payDay);
+    if (selectedRole === 'admin' && !backupEmail.trim()) {
+      setError('Chủ cửa hàng bắt buộc phải nhập Gmail để nhận file sao lưu hệ thống.');
+      return;
+    }
+
+    const result = register(restaurantName, username, password, selectedRole, fullName, payDay, backupEmail);
     if (result.success) {
       setSuccess(`Đăng ký thành công quán "${restaurantName.trim()}"! Hãy dùng thông tin này để đăng nhập.`);
       // Chuyển về tab Đăng nhập sau khi đăng ký thành công
@@ -232,6 +238,21 @@ export const Login = () => {
               required
               fullWidth
             />
+
+            {selectedRole === 'admin' && (
+              <div style={{ marginBottom: '1rem' }}>
+                <Input
+                  label="Tài khoản Gmail nhận file sao lưu (Google Drive)"
+                  type="email"
+                  placeholder="Ví dụ: chucuahang@gmail.com"
+                  value={backupEmail}
+                  onChange={(e) => setBackupEmail(e.target.value)}
+                  icon={Shield}
+                  required={selectedRole === 'admin'}
+                  fullWidth
+                />
+              </div>
+            )}
 
             {/* Vùng chọn Phân quyền vai trò người dùng */}
             <div className={styles.roleSelectionContainer}>

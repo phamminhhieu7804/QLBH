@@ -1,38 +1,43 @@
-import { getOrderModel, getTableModel, getProductModel, getRestaurantModel } from '../config/db.js';
+import { v4 as uuidv4 } from 'uuid';
+import { runBackgroundBackup } from '../services/googleDriveBackup.js';
 
 // Hàm tính toán lại tổng tiền của Order (Helper)
 const recalculateOrderTotals = (order) => {
   const total = order.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   order.totalAmount = total;
-  order.finalAmount = Math.max(0, total - order.discount + order.tax);
+  order.finalAmount = Math.max(0, total - (order.discount || 0) + (order.tax || 0));
   return order;
 };
 
 // [GET] /api/orders/table/:tableId
-// Lấy đơn hàng hiện tại đang hoạt động (chưa thanh toán) của bàn ăn từ DB riêng của quán
+// Lấy đơn hàng hiện tại đang hoạt động
 export const getActiveOrderByTableId = async (req, res) => {
   try {
     const { tableId } = req.params;
+    const db = req.tenantDb;
 
-    // Khởi tạo hoặc tái sử dụng model động
-    const Order = getOrderModel(req.tenantDb);
-    getProductModel(req.tenantDb); // Đăng ký Product model để populate hoạt động
-
-    const order = await Order.findOne({ tableId, paymentStatus: 'pending' }).populate('items.productId');
+    const order = db.data.orders.find(o => o.tableId === tableId && o.paymentStatus === 'pending');
 
     if (!order) {
       return res.status(200).json({
         success: true,
         message: 'Bàn ăn hiện đang trống, chưa có giỏ hàng hoạt động',
-        data: {
-          items: []
-        }
+        data: { items: [] }
       });
     }
 
+    // Gắn (populate) thêm dữ liệu chi tiết của productId vào items để Frontend đọc được image
+    const populatedOrder = JSON.parse(JSON.stringify(order));
+    populatedOrder.items.forEach(item => {
+      const productInfo = db.data.products.find(p => p._id === item.productId);
+      if (productInfo) {
+        item.productId = productInfo;
+      }
+    });
+
     return res.status(200).json({
       success: true,
-      data: order
+      data: populatedOrder
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Lỗi máy chủ', error: error.message });
@@ -40,48 +45,48 @@ export const getActiveOrderByTableId = async (req, res) => {
 };
 
 // [POST] /api/orders/add-item
-// Logic gộp trùng món: Thêm món từ Khách hoặc Thu ngân vào giỏ hàng của quán
+// Thêm món từ Khách hoặc Thu ngân vào giỏ hàng
 export const addItemToOrder = async (req, res) => {
   try {
-    const { tableId, restaurantId, productId, quantity = 1 } = req.body;
+    const { tableId, productId, quantity = 1 } = req.body;
 
-    if (!tableId || !restaurantId || !productId) {
-      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ tableId, restaurantId, và productId' });
+    if (!tableId || !productId) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ tableId và productId' });
     }
 
-    // Khởi tạo hoặc tái sử dụng model động
-    const Product = getProductModel(req.tenantDb);
-    const Order = getOrderModel(req.tenantDb);
+    const db = req.tenantDb;
 
-    // 1. Tìm thông tin sản phẩm gốc
-    const product = await Product.findById(productId);
+    const product = db.data.products.find(p => p._id === productId);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Món ăn không tồn tại trong thực đơn' });
     }
 
-    // 2. Tìm đơn hàng hiện tại của bàn (chưa thanh toán)
-    let order = await Order.findOne({ tableId, paymentStatus: 'pending' });
+    let order = db.data.orders.find(o => o.tableId === tableId && o.paymentStatus === 'pending');
 
     if (!order) {
-      // Khởi tạo hóa đơn mới
-      order = new Order({
+      order = {
+        _id: uuidv4(),
         tableId,
-        restaurantId,
-        items: []
-      });
+        paymentStatus: 'pending',
+        items: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      db.data.orders.push(order);
+    } else {
+      order.updatedAt = new Date().toISOString();
     }
 
-    // 3. Logic gộp trùng món: Kiểm tra xem món ăn đã tồn tại ở trạng thái ĐANG CHỜ LÀM ('pending') chưa
+    // Logic gộp trùng món
     const existingItem = order.items.find(
-      (item) => item.productId.toString() === productId && item.status === 'pending'
+      (item) => item.productId === productId && item.status === 'pending'
     );
 
     if (existingItem) {
-      // ĐÃ CÓ: Chỉ cập nhật tăng số lượng quantity
       existingItem.quantity += Number(quantity);
     } else {
-      // CHƯA CÓ: Tạo mới một dòng món với orderItemId tự sinh ngẫu nhiên
       order.items.push({
+        orderItemId: uuidv4(),
         productId,
         name: product.name,
         price: product.price,
@@ -90,124 +95,98 @@ export const addItemToOrder = async (req, res) => {
       });
     }
 
-    // 4. Tính toán lại tổng số tiền
     recalculateOrderTotals(order);
-    await order.save();
+    await db.write();
 
-    // 5. Đồng bộ thời gian thực WebSockets (Socket.io)
+    // Đồng bộ thời gian thực WebSockets (Socket.io)
     const io = req.app.get('io');
     if (io) {
-      io.emit('order-updated', {
-        tableId,
-        orderId: order._id,
-        items: order.items,
-        tenant: req.tenantCode
-      });
+      io.emit('order-updated', { tableId, orderId: order._id, items: order.items, tenant: req.tenantCode });
     }
 
-    return res.status(200).json({
-      success: true,
-      message: 'Đã thêm món ăn vào hóa đơn thành công!',
-      data: order
-    });
+    return res.status(200).json({ success: true, message: 'Đã thêm món ăn vào hóa đơn thành công!', data: order });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Lỗi thêm món ăn', error: error.message });
   }
 };
 
 // [PUT] /api/orders/update-item-status
-// API cập nhật trạng thái Bếp (Đánh dấu đã xong / Hoàn tác) dựa vào orderItemId duy nhất
+// API cập nhật trạng thái Bếp (Đánh dấu đã xong / Hoàn tác)
 export const updateOrderItemStatus = async (req, res) => {
   try {
     const { orderItemId, status } = req.body;
 
-    if (!orderItemId || !status) {
-      return res.status(400).json({ success: false, message: 'Vui lòng điền orderItemId và trạng thái mới (pending/completed)' });
+    if (!orderItemId || !status || !['pending', 'completed'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ' });
     }
 
-    if (!['pending', 'completed'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ. Phải là pending hoặc completed' });
-    }
-
-    // Khởi tạo hoặc tái sử dụng model động
-    const Order = getOrderModel(req.tenantDb);
-
-    // Tìm hóa đơn chứa dòng món ăn duy nhất này
-    const order = await Order.findOne({ 'items.orderItemId': orderItemId });
+    const db = req.tenantDb;
+    const order = db.data.orders.find(o => o.items.some(i => i.orderItemId === orderItemId));
 
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy dòng món ăn nào khớp với mã ID này' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy dòng món ăn nào khớp' });
     }
 
-    // Sửa trạng thái của item khớp
     const targetItem = order.items.find((item) => item.orderItemId === orderItemId);
     if (targetItem) {
       targetItem.status = status;
     }
+    
+    order.updatedAt = new Date().toISOString();
+    await db.write();
 
-    await order.save();
-
-    // Đồng bộ thời gian thực WebSockets (Socket.io)
     const io = req.app.get('io');
     if (io) {
-      io.emit('kitchen-item-status-updated', {
-        orderItemId,
-        status,
-        tableId: order.tableId,
-        tenant: req.tenantCode
-      });
+      io.emit('kitchen-item-status-updated', { orderItemId, status, tableId: order.tableId, tenant: req.tenantCode });
     }
 
-    return res.status(200).json({
-      success: true,
-      message: `Đã cập nhật trạng thái dòng món sang [${status === 'completed' ? 'ĐÃ LÊN MÓN' : 'ĐANG CHỜ LÀM'}]`,
-      data: order
-    });
+    return res.status(200).json({ success: true, message: `Đã cập nhật trạng thái`, data: order });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Lỗi cập nhật trạng thái món', error: error.message });
   }
 };
 
 // [POST] /api/orders/customer-submit
-// Khách quét QR bấm "Gửi yêu cầu gọi món" từ điện thoại -> Đẩy xuống KDS bếp & Đổi trạng thái bàn ăn
+// Khách quét QR bấm "Gửi yêu cầu gọi món" từ điện thoại
 export const customerSubmitQROrder = async (req, res) => {
   try {
-    const { tableId, restaurantId, items } = req.body;
+    const { tableId, items } = req.body;
 
-    if (!tableId || !restaurantId || !items || !Array.isArray(items) || items.length === 0) {
+    if (!tableId || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: 'Danh sách món ăn gửi đi không hợp lệ' });
     }
 
-    // Khởi tạo hoặc tái sử dụng model động
-    const Product = getProductModel(req.tenantDb);
-    const Order = getOrderModel(req.tenantDb);
-    const Table = getTableModel(req.tenantDb);
+    const db = req.tenantDb;
 
-    // Tìm hoặc tạo mới Order chưa thanh toán cho bàn
-    let order = await Order.findOne({ tableId, paymentStatus: 'pending' });
+    let order = db.data.orders.find(o => o.tableId === tableId && o.paymentStatus === 'pending');
     if (!order) {
-      order = new Order({
+      order = {
+        _id: uuidv4(),
         tableId,
-        restaurantId,
-        items: []
-      });
+        paymentStatus: 'pending',
+        items: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      db.data.orders.push(order);
+    } else {
+      order.updatedAt = new Date().toISOString();
     }
 
-    // Duyệt qua danh sách món gửi lên
     for (const row of items) {
       const { productId, quantity } = row;
-      const product = await Product.findById(productId);
+      const product = db.data.products.find(p => p._id === productId);
       if (!product) continue;
 
-      // Check gộp món trùng trong trạng thái đang chờ bếp
       const existingItem = order.items.find(
-        (item) => item.productId.toString() === productId && item.status === 'pending'
+        (item) => item.productId === productId && item.status === 'pending'
       );
 
       if (existingItem) {
         existingItem.quantity += Number(quantity);
       } else {
         order.items.push({
+          orderItemId: uuidv4(),
           productId,
           name: product.name,
           price: product.price,
@@ -217,107 +196,80 @@ export const customerSubmitQROrder = async (req, res) => {
       }
     }
 
-    // Tính toán tiền hàng và lưu hóa đơn
     recalculateOrderTotals(order);
-    await order.save();
+    
+    const table = db.data.tables.find(t => t._id === tableId);
+    if (table) table.status = 'active';
 
-    // Đổi trạng thái bàn tương ứng sang 'active' (Đang hoạt động)
-    await Table.findByIdAndUpdate(tableId, { status: 'active' });
+    await db.write();
 
-    // Đồng bộ thời gian thực WebSockets (Socket.io)
     const io = req.app.get('io');
     if (io) {
-      io.emit('customer-order', {
-        tableId,
-        orderId: order._id,
-        items: order.items,
-        tenant: req.tenantCode
-      });
-      io.emit('table-status-updated', {
-        tableId,
-        status: 'active',
-        tenant: req.tenantCode
-      });
+      io.emit('customer-order', { tableId, orderId: order._id, items: order.items, tenant: req.tenantCode });
+      io.emit('table-status-updated', { tableId, status: 'active', tenant: req.tenantCode });
     }
 
-    return res.status(200).json({
-      success: true,
-      message: 'Gửi yêu cầu gọi món thành công! Đã gửi thông tin tới bếp.',
-      data: order
-    });
+    return res.status(200).json({ success: true, message: 'Gửi yêu cầu gọi món thành công!', data: order });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Lỗi gửi đơn gọi món', error: error.message });
   }
 };
 
 // [POST] /api/payments/verify-vietqr
-// Xác nhận chuyển khoản VietQR thành công -> Giải phóng bàn ăn trống
+// Thanh toán thành công -> Giải phóng bàn -> TỰ ĐỘNG XUẤT EXCEL GỬI LÊN DRIVE
 export const verifyPaymentAndReleaseTable = async (req, res) => {
   try {
     const { orderId } = req.body;
 
     if (!orderId) {
-      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã hóa đơn orderId' });
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã hóa đơn' });
     }
 
-    // Khởi tạo hoặc tái sử dụng model động
-    const Order = getOrderModel(req.tenantDb);
-    const Table = getTableModel(req.tenantDb);
-
-    const order = await Order.findById(orderId);
+    const db = req.tenantDb;
+    
+    const order = db.data.orders.find(o => o._id === orderId);
     if (!order) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy hóa đơn cần thanh toán' });
     }
 
-    // Đổi trạng thái thanh toán hóa đơn
+    // Đổi trạng thái hoá đơn
     order.paymentStatus = 'paid';
-    await order.save();
+    order.updatedAt = new Date().toISOString();
 
-    // Cập nhật trạng thái bàn ăn về 'trong' (Trống) giải phóng bàn
-    await Table.findByIdAndUpdate(order.tableId, { status: 'trong' });
-
-    // Đồng bộ thời gian thực WebSockets (Socket.io)
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('payment-success', {
-        orderId,
-        tableId: order.tableId,
-        tenant: req.tenantCode
-      });
-      io.emit('table-status-updated', {
-        tableId: order.tableId,
-        status: 'trong',
-        tenant: req.tenantCode
-      });
+    // Dọn dẹp bàn
+    const table = db.data.tables.find(t => t._id === order.tableId);
+    if (table) {
+      table.status = 'trong';
     }
 
-    return res.status(200).json({
-      success: true,
-      message: 'Thanh toán hóa đơn hoàn tất và giải phóng bàn ăn trống thành công!',
-      data: order
-    });
+    await db.write();
+
+    // 🔥 GỌI BACKUP GOOGLE DRIVE NHƯ YÊU CẦU 🔥
+    // Trích xuất cấu hình quán ăn và kích hoạt chạy ngầm
+    const restaurant = db.data.restaurant;
+    if (restaurant) {
+      runBackgroundBackup(req.tenantCode, restaurant);
+    }
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('payment-success', { orderId, tableId: order.tableId, tenant: req.tenantCode });
+      io.emit('table-status-updated', { tableId: order.tableId, status: 'trong', tenant: req.tenantCode });
+    }
+
+    return res.status(200).json({ success: true, message: 'Thanh toán hoàn tất!', data: order });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Lỗi xử lý thanh toán', error: error.message });
   }
 };
 
 // [GET] /api/dashboard/report
-// Báo cáo Doanh thu, số đơn, món chạy nhất, hiệu suất lợi nhuận đối chiếu vốn đầu tư
+// Báo cáo Doanh thu cho Dashboard (Tính trực tiếp từ JSON RAM)
 export const getDashboardReport = async (req, res) => {
   try {
-    const { restaurantId } = req.query;
-
-    if (!restaurantId) {
-      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã restaurantId' });
-    }
-
-    // Khởi tạo hoặc tái sử dụng model động
-    const Restaurant = getRestaurantModel(req.tenantDb);
-    const Order = getOrderModel(req.tenantDb);
-    getProductModel(req.tenantDb); // Đăng ký Product model để populate hoạt động
-
-    // 1. Tìm thông tin quán & Cấu hình tài chính đối chiếu
-    const restaurant = await Restaurant.findById(restaurantId);
+    const db = req.tenantDb;
+    
+    const restaurant = db.data.restaurant;
     if (!restaurant) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy quán ăn hợp lệ' });
     }
@@ -326,8 +278,7 @@ export const getDashboardReport = async (req, res) => {
     const initialInvestment = config.initialInvestment || null;
     const targetProfitMargin = config.targetProfitMargin || null;
 
-    // 2. Tìm toàn bộ các đơn hàng đã thanh toán của quán
-    const paidOrders = await Order.find({ restaurantId, paymentStatus: 'paid' }).populate('items.productId');
+    const paidOrders = db.data.orders.filter(o => o.paymentStatus === 'paid');
 
     let totalRevenue = 0;
     let totalCost = 0;
@@ -335,45 +286,29 @@ export const getDashboardReport = async (req, res) => {
     const productSalesMap = {};
 
     paidOrders.forEach((order) => {
-      totalRevenue += order.finalAmount;
+      totalRevenue += order.finalAmount || 0;
 
       order.items.forEach((item) => {
         const qty = item.quantity;
         const price = item.price;
-        const cost = item.productId ? item.productId.costPrice : 0; // Giá vốn nhập hàng
+        const productInfo = db.data.products.find(p => p._id === item.productId);
+        const cost = productInfo ? productInfo.costPrice : 0;
 
         totalCost += (cost * qty);
 
-        const prodId = item.productId ? item.productId._id.toString() : 'unknown';
+        const prodId = item.productId || 'unknown';
         if (!productSalesMap[prodId]) {
-          productSalesMap[prodId] = {
-            name: item.name,
-            quantity: 0,
-            revenue: 0
-          };
+          productSalesMap[prodId] = { name: item.name, quantity: 0, revenue: 0 };
         }
         productSalesMap[prodId].quantity += qty;
         productSalesMap[prodId].revenue += (price * qty);
       });
     });
 
-    // Tính lợi nhuận thực tế thu về
     const actualProfit = totalRevenue - totalCost;
-
-    // Tính tỷ suất lợi nhuận thực tế %: (Lợi nhuận / Doanh thu) * 100
-    const actualProfitMargin = totalRevenue > 0 
-      ? Math.round((actualProfit / totalRevenue) * 100) 
-      : 0;
-
-    // Sắp xếp tìm 5 món bán chạy nhất
-    const topSellingProducts = Object.values(productSalesMap)
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5);
-
-    // Tính toán tỷ lệ hoàn vốn nếu có cấu hình Vốn ban đầu
-    const breakEvenProgress = (initialInvestment && initialInvestment > 0)
-      ? Math.round((actualProfit / initialInvestment) * 100)
-      : null;
+    const actualProfitMargin = totalRevenue > 0 ? Math.round((actualProfit / totalRevenue) * 100) : 0;
+    const topSellingProducts = Object.values(productSalesMap).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+    const breakEvenProgress = (initialInvestment && initialInvestment > 0) ? Math.round((actualProfit / initialInvestment) * 100) : null;
 
     return res.status(200).json({
       success: true,
@@ -397,7 +332,6 @@ export const getDashboardReport = async (req, res) => {
 };
 
 // [PUT] /api/orders/update-item-qty
-// Cập nhật số lượng món ăn trong đơn hàng
 export const updateOrderItemQuantity = async (req, res) => {
   try {
     const { orderItemId, quantity } = req.body;
@@ -406,8 +340,8 @@ export const updateOrderItemQuantity = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp orderItemId và số lượng mới' });
     }
 
-    const Order = getOrderModel(req.tenantDb);
-    const order = await Order.findOne({ 'items.orderItemId': orderItemId });
+    const db = req.tenantDb;
+    const order = db.data.orders.find(o => o.items.some(i => i.orderItemId === orderItemId));
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng chứa món này' });
@@ -424,31 +358,21 @@ export const updateOrderItemQuantity = async (req, res) => {
     }
 
     recalculateOrderTotals(order);
-    await order.save();
+    order.updatedAt = new Date().toISOString();
+    await db.write();
 
-    // Phát sự kiện đồng bộ socket
     const io = req.app.get('io');
     if (io) {
-      io.emit('order-updated', {
-        tableId: order.tableId,
-        orderId: order._id,
-        items: order.items,
-        tenant: req.tenantCode
-      });
+      io.emit('order-updated', { tableId: order.tableId, orderId: order._id, items: order.items, tenant: req.tenantCode });
     }
 
-    return res.status(200).json({
-      success: true,
-      message: 'Cập nhật số lượng món ăn thành công',
-      data: order
-    });
+    return res.status(200).json({ success: true, message: 'Cập nhật thành công', data: order });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Lỗi cập nhật số lượng món ăn', error: error.message });
   }
 };
 
 // [POST] /api/orders/remove-item
-// Xóa món ăn khỏi đơn hàng
 export const removeOrderItem = async (req, res) => {
   try {
     const { orderItemId } = req.body;
@@ -457,63 +381,50 @@ export const removeOrderItem = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp orderItemId' });
     }
 
-    const Order = getOrderModel(req.tenantDb);
-    const order = await Order.findOne({ 'items.orderItemId': orderItemId });
+    const db = req.tenantDb;
+    const order = db.data.orders.find(o => o.items.some(i => i.orderItemId === orderItemId));
 
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng chứa món này' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
     }
 
     order.items = order.items.filter(i => i.orderItemId !== orderItemId);
-
     recalculateOrderTotals(order);
-    await order.save();
+    order.updatedAt = new Date().toISOString();
+    
+    await db.write();
 
-    // Phát sự kiện đồng bộ socket
     const io = req.app.get('io');
     if (io) {
-      io.emit('order-updated', {
-        tableId: order.tableId,
-        orderId: order._id,
-        items: order.items,
-        tenant: req.tenantCode
-      });
+      io.emit('order-updated', { tableId: order.tableId, orderId: order._id, items: order.items, tenant: req.tenantCode });
     }
 
-    return res.status(200).json({
-      success: true,
-      message: 'Xóa món khỏi đơn hàng thành công',
-      data: order
-    });
+    return res.status(200).json({ success: true, message: 'Đã xóa', data: order });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi xóa món khỏi đơn hàng', error: error.message });
+    return res.status(500).json({ success: false, message: 'Lỗi', error: error.message });
   }
 };
 
 // [GET] /api/orders/history
-// Lấy danh sách các hóa đơn đã hoàn tất thanh toán (paid) phục vụ Dashboard thống kê doanh thu
 export const getPaidOrdersHistory = async (req, res) => {
   try {
-    const { restaurantId } = req.query;
-
-    if (!restaurantId) {
-      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã restaurantId' });
-    }
-
-    const Order = getOrderModel(req.tenantDb);
-    getProductModel(req.tenantDb); // Đăng ký Product model để populate hoạt động
-
-    // Lấy 50 hóa đơn đã thanh toán gần đây nhất, sắp xếp mới nhất lên đầu
-    const history = await Order.find({ restaurantId, paymentStatus: 'paid' })
-      .populate('items.productId')
-      .sort({ updatedAt: -1 })
-      .limit(50);
-
-    return res.status(200).json({
-      success: true,
-      data: history
+    const db = req.tenantDb;
+    const history = db.data.orders
+      .filter(o => o.paymentStatus === 'paid')
+      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      .slice(0, 50);
+      
+    // Populate
+    const populatedHistory = JSON.parse(JSON.stringify(history));
+    populatedHistory.forEach(order => {
+      order.items.forEach(item => {
+        const productInfo = db.data.products.find(p => p._id === item.productId);
+        if (productInfo) item.productId = productInfo;
+      });
     });
+
+    return res.status(200).json({ success: true, data: populatedHistory });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Lỗi trích xuất lịch sử đơn hàng', error: error.message });
+    return res.status(500).json({ success: false, message: 'Lỗi', error: error.message });
   }
 };

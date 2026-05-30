@@ -1,4 +1,4 @@
-import { getTableModel, getProductModel } from './db.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // 1. Thực đơn mẫu truyền thống (Quán phở truyền thống - mặc định)
 export const TRADITIONAL_MENU = [
@@ -120,46 +120,49 @@ export const MILKTEA_MENU = [
   }
 ];
 
-// Hàm tự động seed dữ liệu cho cơ sở dữ liệu của một quán
-export const seedTenantData = async (dbConnection, tenantCode, restaurantId) => {
+// Hàm tự động seed dữ liệu cho cơ sở dữ liệu File JSON cục bộ
+export const seedTenantData = async (db, tenantCode) => {
   try {
-    const Table = getTableModel(dbConnection);
-    const Product = getProductModel(dbConnection);
+    let changed = false;
 
-    // 1. Seed 12 bàn mặc định
-    const tableCount = await Table.countDocuments();
-    if (tableCount === 0) {
-      console.log(`[Multi-Tenant Seeder] Khởi tạo 12 bàn mặc định cho quán: ${tenantCode}`);
+    // 1. Seed 12 bàn mặc định nếu chưa có bàn nào
+    if (db.data.tables.length === 0) {
+      console.log(`[Lowdb Seeder] Khởi tạo 12 bàn mặc định cho quán: ${tenantCode}`);
       
-      const tablesList = Array.from({ length: 12 }, (_, i) => ({
-        tableName: `Bàn ${String(i + 1).padStart(2, '0')}`,
-        restaurantId,
-        status: 'trong'
-      }));
+      const tablesList = Array.from({ length: 12 }, (_, i) => {
+        const id = uuidv4();
+        return {
+          _id: id,
+          tableName: `Bàn ${String(i + 1).padStart(2, '0')}`,
+          status: 'trong',
+          qrCodeUrl: `https://order-quản lý bán hàng by Sinh Viên Bonnie.com/order?tenant=${tenantCode}&table=${id}`
+        };
+      });
 
-      for (const t of tablesList) {
-        const table = new Table(t);
-        table.qrCodeUrl = `https://qlbh-ten.vercel.app/order?tenant=${tenantCode}&table=${table._id}`;
-        await table.save();
-      }
+      db.data.tables.push(...tablesList);
+      changed = true;
     }
 
     // 2. Seed thực đơn mẫu
-    const productCount = await Product.countDocuments();
-    if (productCount === 0) {
-      console.log(`[Multi-Tenant Seeder] Khởi tạo thực đơn mẫu cho quán: ${tenantCode}`);
+    if (db.data.products.length === 0) {
+      console.log(`[Lowdb Seeder] Khởi tạo thực đơn mẫu cho quán: ${tenantCode}`);
       const isMilktea = tenantCode.toLowerCase().includes('tra') || tenantCode.toLowerCase().includes('chill');
       const menuSource = isMilktea ? MILKTEA_MENU : TRADITIONAL_MENU;
 
       const productsToInsert = menuSource.map(item => ({
+        _id: uuidv4(),
         ...item,
-        isAvailable: true,
-        restaurantId
+        isAvailable: true
       }));
 
-      await Product.insertMany(productsToInsert);
+      db.data.products.push(...productsToInsert);
+      changed = true;
+    }
+
+    if (changed) {
+      await db.write();
     }
   } catch (error) {
-    console.error(`[Multi-Tenant Seeder] Lỗi khởi tạo dữ liệu mặc định cho quán ${tenantCode}:`, error.message);
+    console.error(`[Lowdb Seeder] Lỗi khởi tạo dữ liệu mặc định cho quán ${tenantCode}:`, error.message);
   }
 };

@@ -230,7 +230,18 @@ export const TenantProvider = ({ children }) => {
           }, 10000); // 10 giây timeout cho mỗi lượt request đơn lẻ
           
           if (!res.ok) {
-            throw new Error(`Server returned HTTP ${res.status}`);
+            // Đọc thông báo lỗi từ Backend (nếu có)
+            const errorData = await res.json().catch(() => ({}));
+            
+            // Nếu Backend báo lỗi 500 rõ ràng liên quan đến cấu hình DB hoặc 400 Bad Request, dừng Retry ngay lập tức để báo cho người dùng
+            if (res.status === 500 || res.status === 400) {
+              clearTimeout(globalTimeoutId);
+              setIsBackendConnecting(false);
+              setBackendError(errorData.error || errorData.message || `Lỗi máy chủ (${res.status}). Vui lòng kiểm tra lại cấu hình.`);
+              return; // Thoát hẳn, không Retry nữa
+            }
+            
+            throw new Error(errorData.message || `Server returned HTTP ${res.status}`);
           }
           
           const data = await res.json();
@@ -267,6 +278,28 @@ export const TenantProvider = ({ children }) => {
               if (data.data.config.targetProfitMargin !== null && data.data.config.targetProfitMargin !== undefined) {
                 localStorage.setItem(`saas_restaurant_target_profit_rate_${tenant}`, data.data.config.targetProfitMargin);
               }
+            }
+
+            // Đồng bộ backupEmail nếu user hiện tại là Admin và có backupEmail nhưng Backend chưa lưu
+            const savedUsers = JSON.parse(localStorage.getItem('saas_registered_users') || '[]');
+            const currentUser = savedUsers.find(u => u.tenant === tenant && u.role === 'admin');
+            
+            if (currentUser && currentUser.backupEmail) {
+               const backendEmails = (data.data.config && data.data.config.backupEmails) || [];
+               if (!backendEmails.includes(currentUser.backupEmail.toLowerCase())) {
+                 // Push to Backend quietly
+                 fetch(`${baseUrl}/api/restaurant/config`, {
+                   method: 'POST',
+                   headers: {
+                     'Content-Type': 'application/json',
+                     'x-tenant': tenant
+                   },
+                   body: JSON.stringify({
+                     restaurantId: id,
+                     backupEmail: currentUser.backupEmail
+                   })
+                 }).catch(err => console.error('Failed to sync backup email:', err));
+               }
             }
 
             setIsBackendConnecting(false);
@@ -413,7 +446,7 @@ export const TenantProvider = ({ children }) => {
   };
 
   // Logic Đăng ký tài khoản mới phân quyền
-  const register = (rawTenantName, username, password, selectedRole, fullName = '', payDay = 5) => {
+  const register = (rawTenantName, username, password, selectedRole, fullName = '', payDay = 5, backupEmail = '') => {
     if (!rawTenantName.trim() || !username.trim() || !password.trim()) {
       return { success: false, message: 'Vui lòng điền đầy đủ tất cả thông tin.' };
     }
@@ -441,7 +474,8 @@ export const TenantProvider = ({ children }) => {
       fullName: fullName.trim() || username.trim(),
       startDate: new Date().toLocaleDateString('vi-VN'),
       payDay: Number(payDay) || 5,
-      hourlyRate: selectedRole === 'admin' ? 0 : 25000
+      hourlyRate: selectedRole === 'admin' ? 0 : 25000,
+      backupEmail: selectedRole === 'admin' ? backupEmail.trim() : ''
     };
 
     setRegisteredUsers((prev) => [...prev, newUser]);
